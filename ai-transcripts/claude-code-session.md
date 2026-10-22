@@ -8053,3 +8053,518 @@ All green. Last step, the transcript:
 ```bash
 python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git status -sb | head -1 && git log --oneline | wc -l
 ```
+
+<details><summary>Result</summary>
+
+```
+wrote ai-transcripts/claude-code-session.md: 452 blocks
+0
+## main...origin/main
+23
+```
+
+</details>
+
+## 🤖 Claude
+
+The third check found a real security bug, in code I added during the first re-check. It's fixed, tested in a browser and pushed.
+
+**The security bug:** after login, the app sends you back to the page you came from. My check on that return address could be tricked with a backslash: a link like `seatbook…/login?next=/\evil.com` sent people to another website once they logged in. An attacker could use a real-looking Seatbook link to send users to a fake site. The app now reads the address the same way the browser does and only follows it if it stays on Seatbook. I tested five attack variants and all now land on Seatbook's home page; the normal return to an event still works. I added this to the README's list of AI mistakes and to your interview guide.
+
+**One small fix:** when a login expired (after 7 days), the user was sent to the login page and lost their place. They now come back to the page they were on.
+
+**Checked and fine:**
+- No code that injects raw HTML into the page and no raw SQL built from user input, so no openings for the usual script or database injection attacks.
+- An expired login clears itself and sends the user to log in, and they can still browse while logged out.
+- 36 integration and 3 unit tests pass, the client builds, and every browser test passes: holds, expiry, the 4-seat limit, cancelling, past events, returning after login.
+
+The repo has 23 commits and is up to date with GitHub.
+
+Each pass has found less: the first found real problems, the second an outdated Node version, the third one bug in code added late. More passes won't change much now. The next biggest gain is you knowing the code well, since the interview starts with 10 minutes explaining it without AI.
+
+**What's left for you:**
+1. **Submit** `https://github.com/AkibUllah/seatbook` through the Google Form before 30 October, end of day Bangladesh time.
+2. **Re-export the transcript right before submitting**, so it includes this message. The command is in my earlier message, or ask me to do it.
+3. **Study [seatbook-interview-guide.md](../seatbook-interview-guide.md)** until you can explain, without looking:
+   - why the database rule stops double booking and a check in the code can't
+   - how a hold expires
+   - how confirming works
+   - the AI mistakes listed in the README, since you may be asked about them
+
+## 🧑 User
+
+please check 4th time check full project eveything ok or not please
+
+## 🤖 Claude
+
+Fourth pass. This time I'll **read every source file in full** as it is now, not just test behaviour, starting with what changed after the independent review, since those lines have been reviewed least.
+
+**🔧 Bash**
+
+*Show code changed since the independent review*
+
+```bash
+git diff db2db73..HEAD --stat -- server client docker-compose.yml && git diff db2db73..HEAD -- server/src client/src server/Dockerfile client/Dockerfile
+```
+
+<details><summary>Result</summary>
+
+```
+client/Dockerfile                    |  2 +-
+ client/src/api.ts                    |  2 +-
+ client/src/pages/CreateEventPage.tsx |  2 +-
+ client/src/pages/EventDetailPage.tsx |  4 ++--
+ client/src/pages/LoginPage.tsx       | 18 +++++++++++++++++-
+ client/src/pages/MyBookingsPage.tsx  |  2 +-
+ server/Dockerfile                    |  2 +-
+ 7 files changed, 24 insertions(+), 8 deletions(-)
+diff --git a/client/Dockerfile b/client/Dockerfile
+index 833b33b..3967a11 100644
+--- a/client/Dockerfile
++++ b/client/Dockerfile
+@@ -1,4 +1,4 @@
+-FROM node:20-alpine
++FROM node:24-alpine
+ WORKDIR /app
+ COPY package*.json ./
+ RUN npm ci
+diff --git a/client/src/api.ts b/client/src/api.ts
+index feed3d2..c2d928c 100644
+--- a/client/src/api.ts
++++ b/client/src/api.ts
+@@ -28,7 +28,7 @@ export async function api<T = unknown>(path: string, options: { method?: string;
+   // expired or invalid session: start over at the login page
+   if (res.status === 401 && token && !path.startsWith('/auth')) {
+     clearSession();
+-    window.location.href = '/login';
++    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+   }
+ 
+   if (!res.ok) {
+diff --git a/client/src/pages/CreateEventPage.tsx b/client/src/pages/CreateEventPage.tsx
+index 9aa1e1b..83eda7f 100644
+--- a/client/src/pages/CreateEventPage.tsx
++++ b/client/src/pages/CreateEventPage.tsx
+@@ -51,7 +51,7 @@ export default function CreateEventPage() {
+   };
+ 
+   if (getUser()?.role !== 'ORGANIZER') {
+-    return <Navigate to
+… [3412 more characters omitted]
+```
+
+</details>
+
+**🔧 Edit**
+
+`/home/akib/Desktop/dev_monks/seatbook/client/src/pages/CreateEventPage.tsx`
+
+**old:**
+```
+  if (getUser()?.role !== 'ORGANIZER') {
+    return <Navigate to="/login?next=/events/new" replace />;
+  }
+```
+
+**new:**
+```
+  const user = getUser();
+  if (!user) {
+    return <Navigate to="/login?next=/events/new" replace />;
+  }
+  if (user.role !== 'ORGANIZER') {
+    return <Navigate to="/" replace />;
+  }
+```
+
+**🔧 Bash**
+
+*Read final server source files*
+
+```bash
+for f in server/src/app.ts server/src/routes/events.ts server/src/routes/bookings.ts server/src/services/bookingService.ts; do echo "===== $f"; cat -n $f; done
+```
+
+<details><summary>Result</summary>
+
+```
+The file /home/akib/Desktop/dev_monks/seatbook/client/src/pages/CreateEventPage.tsx has been updated successfully. (note: the file had been modified on disk since you last read it — the edit applied cleanly, but the file contains other changes not in your context. Read it before edits that depend on surrounding content.)
+```
+
+</details>
+
+<details><summary>Result</summary>
+
+```
+===== server/src/app.ts
+     1	import express from 'express';
+     2	import cors from 'cors';
+     3	import helmet from 'helmet';
+     4	import { config } from './config';
+     5	import prisma from './db';
+     6	import { asyncHandler, errorHandler, notFound } from './errors';
+     7	import authRoutes from './routes/auth';
+     8	import eventRoutes from './routes/events';
+     9	import bookingRoutes from './routes/bookings';
+    10	import holdRoutes from './routes/holds';
+    11	
+    12	export function createApp() {
+    13	  const app = express();
+    14	
+    15	  // only behind a reverse proxy; otherwise clients could spoof X-Forwarded-For past the rate limit
+    16	  if (config.trustProxy) {
+    17	    app.set('trust proxy', config.trustProxy);
+    18	  }
+    19	  app.use(helmet());
+    20	  app.use(cors({ origin: config.corsOrigins }));
+    21	  app.use(express.json({ limit: '20kb' }));
+    22	
+    23	  app.get(
+    24	    '/health',
+    25	    asyncHandler(async (req, res) => {
+    26	      await prisma.$queryRaw`SELECT 1`;
+    27	      res.json({ ok: true });
+    28	    })
+    29	  );
+    30	
+    31	  app.use('/auth', authRoutes);
+    32	  app.use('/events', eventRoutes);
+    33	  app.use('/bookings', bookingRoutes);
+    34	  app.use('/holds', holdRoutes);
+    35	
+    36	  app.use(notFound);
+    37	  app.use(errorHandler);
+    38	
+    39	  return app;
+    40	}
+===== server/src/routes/events.ts
+     1	import { Router } from 'express';
+     2	import prisma from '../db';
+  
+… [13159 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Confirm released holds appear in My Bookings*
+
+```bash
+API=localhost:4000; T=$(curl -s $API/auth/login -H 'content-type: application/json' -d '{"email":"bob@seatbook.test","password":"password123"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])"); curl -s $API/bookings/mine -H "authorization: Bearer $T" | python3 -c "import sys,json;[print(b['event']['title'], b['seat'], b['status']) for b in json.load(sys.stdin)]"; echo "--- db rows for bob:"; docker exec seatbook-db-1 psql -U seatbook -tAc "select b.id, s.label, b.status, b.\"expiresAt\" is not null as was_hold from \"Booking\" b join \"Seat\" s on s.id=b.\"seatId\" where \"userId\"=3 order by b.id"
+```
+
+<details><summary>Result</summary>
+
+```
+Postgres in Practice E1 CANCELLED
+Postgres in Practice A3 CANCELLED
+Postgres in Practice A2 CONFIRMED
+--- db rows for bob:
+2|A2|CONFIRMED|f
+3|A3|CANCELLED|f
+7|D1|HELD|t
+8|E1|CANCELLED|t
+9|E2|HELD|t
+10|E3|HELD|t
+```
+
+</details>
+
+**🔧 Bash**
+
+*Add RELEASED status, migrations, and test*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook/server && mkdir -p prisma/migrations/20261023000000_released_holds prisma/migrations/20261023000100_reclassify_released_holds && cat > prisma/migrations/20261023000000_released_holds/migration.sql <<'EOF'
+-- AlterEnum
+-- A hold the attendee let go of is not a cancelled booking. Until now both were
+-- CANCELLED, so released holds showed up in My Bookings as cancelled bookings.
+ALTER TYPE "BookingStatus" ADD VALUE 'RELEASED';
+EOF
+cat > prisma/migrations/20261023000100_reclassify_released_holds/migration.sql <<'EOF'
+-- Separate migration: a new enum value can't be used in the transaction that adds it.
+-- Released holds are the only CANCELLED rows that still carry an expiresAt:
+-- confirming a hold clears it, and bookings made directly never had one.
+UPDATE "Booking" SET "status" = 'RELEASED' WHERE "status" = 'CANCELLED' AND "expiresAt" IS NOT NULL;
+EOF
+python3 - <<'EOF'
+def edit(p, pairs):
+    s=open(p).read()
+    for a,b in pairs:
+        assert a in s, (p,a[:50]); s=s.replace(a,b)
+    open(p,'w').write(s)
+edit('prisma/schema.prisma', [("  CANCELLED\n  EXPIRED\n}", "  CANCELLED\n  EXPIRED\n  RELEASED\n}")])
+edit('src/services/bookingService.ts', [
+("""    where: { id: holdId, userId, status: 'HELD' },
+    data: { status: 'CANCELLED', cancelledAt: new Date() },""","""    where: { id: holdId, userId, status: 'HELD' },
+    data: { status: 'RELEASED', cancelledAt: new Date() },"""),
+("""  if (booking.status === 'CANCELLED') {
+    throw new HttpError(409, 'This hold was released');
+  }""","""  if (booking.status === 'RELEASED') {
+    throw new HttpError(409, 'This hold was released');
+  }
+  if (booking.status === 'CANCELLED') {
+    throw new HttpError(409, 'This booking was cancelled');
+  }"""),
+])
+edit('test/integration/holds.test.ts', [
+("""  it("cannot release someone else's hold", async () => {""","""  it('does not show up as a cancelled booking', async () => {
+    const event = await createEvent();
+    const alice = await createUser();
+    const h = await hold(alice, event.seats[0].id);
+    await api().delete(`/holds/${h.body.id}`).set('Authorization', alice.auth);
+
+    const mine = await api().get('/bookings/mine').set('Authorization', alice.auth);
+    expect(mine.body).toHaveLength(0);
+    const confirm = await api().post(`/holds/${h.body.id}/confirm`).set('Authorization', alice.auth);
+    expect(confirm.status).toBe(409);
+  });
+
+  it("cannot release someone else's hold", async () => {"""),
+])
+EOF
+grep -n "RELEASED"
+… [52 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+src/services/bookingService.ts:119:  if (booking.status === 'RELEASED') {
+src/services/bookingService.ts:134:    data: { status: 'RELEASED', cancelledAt: new Date() },
+prisma/schema.prisma:21:  RELEASED
+```
+
+</details>
+
+## 🤖 Claude
+
+Applying the migration on the dev database, which already contains Bob's wrongly-labelled E1, then running the tests:
+
+**🔧 Bash**
+
+*Apply migrations, verify data and run tests*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook && docker compose restart server >/dev/null 2>&1; for i in $(seq 1 60); do curl -sf localhost:4000/health >/dev/null && break; sleep 3; done; docker compose logs server --tail 40 | grep -E "Applying|rror"; docker compose exec -T server npm run typecheck >/dev/null 2>&1 && echo "server typecheck OK"; echo "--- bob's rows after migration:"; docker exec seatbook-db-1 psql -U seatbook -tAc "select s.label, b.status from \"Booking\" b join \"Seat\" s on s.id=b.\"seatId\" where \"userId\"=3 order by b.id" | tr '\n' ' '; echo; T=$(curl -s localhost:4000/auth/login -H 'content-type: application/json' -d '{"email":"bob@seatbook.test","password":"password123"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])"); echo "--- bob's My Bookings:"; curl -s localhost:4000/bookings/mine -H "authorization: Bearer $T" | python3 -c "import sys,json;[print(' ', b['seat'], b['status']) for b in json.load(sys.stdin)]"; docker compose exec -T server npm run test:integration 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E "Tests |FAIL|cancelled booking"
+```
+
+<details><summary>Result</summary>
+
+```
+server-1  | Applying migration `20261023000000_released_holds`
+server-1  | Applying migration `20261023000100_reclassify_released_holds`
+server typecheck OK
+--- bob's rows after migration:
+A2|CONFIRMED A3|CANCELLED D1|HELD E1|RELEASED E2|HELD E3|HELD 
+--- bob's My Bookings:
+  A3 CANCELLED
+  A2 CONFIRMED
+     ✓ does not show up as a cancelled booking 1216ms
+      Tests  37 passed (37)
+```
+
+</details>
+
+**🔧 Bash**
+
+*Check schema drift and client status usage*
+
+```bash
+docker exec seatbook-db-1 psql -U seatbook -tAc "DROP DATABASE IF EXISTS seatbook_shadow" >/dev/null; docker exec seatbook-db-1 psql -U seatbook -tAc "CREATE DATABASE seatbook_shadow" >/dev/null; docker compose exec -T server sh -c 'npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url postgresql://seatbook:seatbook@db:5432/seatbook_shadow --script' 2>&1 | grep -v "^prisma:warn"; docker exec seatbook-db-1 psql -U seatbook -tAc "DROP DATABASE seatbook_shadow" >/dev/null; grep -rn "CANCELLED" client/src | head
+```
+
+<details><summary>Result</summary>
+
+```
+NOTICE:  database "seatbook_shadow" does not exist, skipping
+-- This is an empty migration.
+
+client/src/pages/MyBookingsPage.tsx:8:  status: 'CONFIRMED' | 'CANCELLED';
+client/src/pages/MyBookingsPage.tsx:130:          const isCancelled = b.status === 'CANCELLED';
+```
+
+</details>
+
+## 🤖 Claude
+
+No drift between schema and migrations, and the client only shows CONFIRMED and CANCELLED bookings, which is now correct. Next, a full read of the main client page:
+
+**🔧 Read**
+
+`/home/akib/Desktop/dev_monks/seatbook/client/src/pages/EventDetailPage.tsx`
+
+<details><summary>Result</summary>
+
+```
+60	    return 'bg-gradient-to-br from-[#a855f7]/20 to-[#6366f1]/20 text-white/30 cursor-not-allowed';
+61	  }
+62	  return 'bg-gradient-to-br from-[#a855f7]/60 to-[#6366f1]/60 hover:from-[#a855f7] hover:to-[#6366f1] hover:scale-110 cursor-pointer';
+63	}
+64	
+65	export default function EventDetailPage() {
+66	  const { id } = useParams();
+67	  const navigate = useNavigate();
+68	  const user = getUser();
+69	  const [event, setEvent] = useState<EventDetail | null>(null);
+70	  const [loadError, setLoadError] = useState('');
+71	  const [busySeat, setBusySeat] = useState<number | null>(null);
+72	  const [confirming, setConfirming] = useState(false);
+73	  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+74	  // server clock minus ours; the countdown follows the server, which decides expiry
+75	  const [clockOffset, setClockOffset] = useState(0);
+76	  const [now, setNow] = useState(() => Date.now());
+77	
+78	  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+79	  // polls and post-action refreshes overlap; only the newest response may update the page
+80	  const latestFetch = useRef(0);
+81	
+82	  const showToast = useCallback((type: 'success' | 'error', message: string) => {
+83	    clearTimeout(toastTimer.current);
+84	    setToast({ type, message });
+85	    toastTimer.current = setTimeout(() => setToast(null), 4000);
+86	  }, []);
+87	
+88	  const fetchEvent = useCallback(async () => {
+89	    const fetchId = ++latestFetch.current;
+90	  
+… [4230 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Update counts and run regression*
+
+```bash
+sed -i 's/\*\*36 integration tests against a real Postgres\*\*/**37 integration tests against a real Postgres**/' README.md && sed -i 's/36 integration tests on a \*\*real Postgres\*\*/37 integration tests on a **real Postgres**/; s/# 36 API tests/# 37 API tests/' ../seatbook-interview-guide.md && grep -c "37 integration" README.md ../seatbook-interview-guide.md && docker compose exec -T client npx tsc --noEmit && echo "client OK" && docker compose exec -T server npm test 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep "Tests "; S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; docker exec seatbook-db-1 psql -U seatbook -tAc "update \"Booking\" set status='RELEASED', \"cancelledAt\"=now() where status='HELD'" >/dev/null; node $S/run.mjs $S/shots 2>&1 | grep -E "toast:|nav:|E1"; node $S/redirect.mjs 2>&1 | tail -3
+```
+
+<details><summary>Result</summary>
+
+```
+README.md:1
+../seatbook-interview-guide.md:1
+client OK
+      Tests  3 passed (3)
+toast: 🎉 Booked! Seat C3 is yours.
+toast: Your hold ran out and the seat went back on sale
+toast: You can hold up to 4 seats at a time for an event
+Seat E1, available disabled=false
+nav: ✨ Seatbook | 🎉 Events | ➕ Create Event | N | Logout
+after login: /events/2
+my-bookings round trip: /my-bookings
+next=//evil lands on: http://localhost:5173/
+```
+
+</details>
+
+## 🤖 Claude
+
+Also checking the `/events/new` fix in the browser: a logged-in attendee should land on the home page, not loop through login.
+
+**🔧 Bash**
+
+*Test create-event page access by role*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; cat > $S/newpage.mjs <<'EOF'
+import puppeteer from 'puppeteer-core';
+const APP = 'http://localhost:5173';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+for (const who of [null, 'alice@seatbook.test', 'organizer@seatbook.test']) {
+  const ctx = await browser.createBrowserContext(); const p = await ctx.newPage();
+  if (who) {
+    await p.goto(`${APP}/login`);
+    await p.type('input[aria-label="Email address"]', who);
+    await p.type('input[aria-label="Password"]', 'password123');
+    await Promise.all([p.waitForNavigation(), p.click('button[type=submit]')]);
+  }
+  await p.goto(`${APP}/events/new`);
+  await new Promise((r) => setTimeout(r, 1500));
+  console.log((who ?? 'logged out').padEnd(26), '-> /events/new lands on', new URL(p.url()).pathname + new URL(p.url()).search);
+  await ctx.close();
+}
+await browser.close();
+EOF
+node $S/newpage.mjs 2>&1 | tail -3
+```
+
+<details><summary>Result</summary>
+
+```
+logged out                 -> /events/new lands on /login?next=/events/new
+alice@seatbook.test        -> /events/new lands on /
+organizer@seatbook.test    -> /events/new lands on /events/new
+```
+
+</details>
+
+**🔧 Bash**
+
+*Commit both fixes and push*
+
+```bash
+git add client/src/pages/CreateEventPage.tsx && git commit -q -m "Send attendees home from the create-event page, not to login
+
+A logged-in attendee opening /events/new was sent to the login page with
+a return path back to /events/new, so logging in again just looped.
+Logged-out visitors still go to login; logged-in non-organizers go home." && git add -A server README.md && git commit -q -m "Keep released holds out of My Bookings
+
+Releasing a hold set it to CANCELLED, the same status as a cancelled
+booking, so a seat someone clicked and let go showed up in My Bookings
+as a cancelled booking they never made. Add a RELEASED status. A second
+migration reclassifies existing released holds: they are the only
+CANCELLED rows that still have an expiresAt, because confirming clears
+it and direct bookings never had one. Confirming a released hold or a
+cancelled booking now says which it was." && git push -q origin main && git log --oneline | head -3
+```
+
+<details><summary>Result</summary>
+
+```
+6de841b Keep released holds out of My Bookings
+e7cb954 Send attendees home from the create-event page, not to login
+8adf432 Update AI transcript
+```
+
+</details>
+
+## 🤖 Claude
+
+Since this pass added two new migrations, the clean start from GitHub must be re-proven, because migrations run on an empty database there. One more fresh clone:
+
+**🔧 Bash**
+
+*Fresh clone clean start with new migrations*
+
+```bash
+docker compose down -v >/dev/null 2>&1; F=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/fresh3; rm -rf $F && git clone -q https://github.com/AkibUllah/seatbook.git $F && cd $F && git log --oneline | head -1 && docker compose up --build -d >/dev/null 2>&1; for i in $(seq 1 120); do curl -sf localhost:4000/health >/dev/null && echo "API healthy" && break; sleep 5; done; curl -s -o /dev/null -w "client %{http_code}\n" localhost:5173; docker compose logs server 2>&1 | grep -cE "Applying migration"; docker compose exec -T server npm run test:integration 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E "Tests |FAIL"; docker compose down -v >/dev/null 2>&1; cd /home/akib/Desktop/dev_monks/seatbook && docker compose up -d >/dev/null 2>&1; for i in $(seq 1 120); do curl -sf localhost:4000/health >/dev/null && echo "your local app is back up" && break; sleep 5; done
+```
+
+<details><summary>Result</summary>
+
+```
+6de841b Keep released holds out of My Bookings
+API healthy
+client 200
+6
+      Tests  37 passed (37)
+your local app is back up
+```
+
+</details>
+
+## 🤖 Claude
+
+The fresh clone applies all 6 migrations cleanly on an empty database, and all 37 tests pass. Last, the transcript:
+
+**🔧 Bash**
+
+*Re-export transcript and push*
+
+```bash
+python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git status -sb | head -1 && git log --oneline | wc -l
+```
