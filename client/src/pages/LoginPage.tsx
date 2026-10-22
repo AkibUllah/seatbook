@@ -1,32 +1,33 @@
 import { useState, FormEvent } from 'react';
 import GradientButton from '../components/GradientButton';
+import { api, errorMessage } from '../api';
+import { saveSession, SessionUser } from '../session';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState<SessionUser['role']>('ATTENDEE');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
 
-    const res = await fetch(`http://localhost:4000/auth/${isLogin ? 'login' : 'register'}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(isLogin ? { email, password } : { email, password, name }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.message || data.error);
-      return;
+    try {
+      const data = await api<{ token: string; user: SessionUser }>(`/auth/${isLogin ? 'login' : 'register'}`, {
+        method: 'POST',
+        body: isLogin ? { email, password } : { email, password, name, role },
+      });
+      saveSession(data.token, data.user);
+      window.location.href = '/';
+    } catch (err) {
+      setError(errorMessage(err));
+      setSubmitting(false);
     }
-
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    window.location.href = '/';
   };
 
   return (
@@ -44,34 +45,76 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <input
-              placeholder="👤 Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
-            />
+            <>
+              <input
+                placeholder="👤 Full name"
+                aria-label="Full name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
+              />
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-white/5 border border-white/10" role="radiogroup">
+                {(
+                  [
+                    ['ATTENDEE', '🎟️ Book seats'],
+                    ['ORGANIZER', '🎤 Host events'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={role === value}
+                    onClick={() => setRole(value)}
+                    className={`py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                      role === value ? 'bg-gradient-to-r from-[#a855f7] to-[#ec4899]' : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
           <input
+            type="email"
             placeholder="📧 Email address"
+            aria-label="Email address"
+            autoComplete="email"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
           />
           <input
             type="password"
-            placeholder="🔒 Password"
+            placeholder={isLogin ? '🔒 Password' : '🔒 Password (8+ characters)'}
+            aria-label="Password"
+            autoComplete={isLogin ? 'current-password' : 'new-password'}
+            required
+            minLength={isLogin ? undefined : 8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
           />
           {error && <p className="text-[#fca5a5] text-sm">⚠️ {error}</p>}
-          <GradientButton type="submit">{isLogin ? 'Sign In 🚀' : 'Create Account ✨'}</GradientButton>
+          <GradientButton type="submit" disabled={submitting}>
+            {isLogin ? 'Sign In 🚀' : 'Create Account ✨'}
+          </GradientButton>
         </form>
         <p className="mt-6 text-center text-white/50">
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
-          <span onClick={() => setIsLogin(!isLogin)} className="text-[#a855f7] cursor-pointer hover:underline">
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+            }}
+            className="text-[#a855f7] cursor-pointer hover:underline"
+          >
             {isLogin ? 'Sign up' : 'Sign in'}
-          </span>
+          </button>
         </p>
       </div>
     </div>

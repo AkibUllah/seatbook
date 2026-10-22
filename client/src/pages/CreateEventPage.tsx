@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { api, errorMessage } from '../api';
+import { getUser } from '../session';
 
 export default function CreateEventPage() {
   const navigate = useNavigate();
@@ -13,46 +13,52 @@ export default function CreateEventPage() {
   const [cols, setCols] = useState(8);
   const [price, setPrice] = useState('0');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (!startsAt) {
+      setError('Pick a date and time');
+      return;
+    }
+    const priceCents = Math.round(parseFloat(price || '0') * 100);
+    if (Number.isNaN(priceCents) || priceCents < 0) {
+      setError('Enter a valid price');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/events`, {
+      const event = await api<{ id: number }>('/events', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
+        body: {
           title,
           description,
           venue,
           startsAt: new Date(startsAt).toISOString(),
           rows: Number(rows),
           cols: Number(cols),
-          priceCents: Math.round(parseFloat(price) * 100),
-        }),
+          priceCents,
+        },
       });
-
-      if (!res.ok) {
-        setError(await res.text());
-        return;
-      }
-
-      const event = await res.json();
       navigate(`/events/${event.id}`);
     } catch (err) {
-      console.error(err);
-      setError('Something went wrong 😢');
+      setError(errorMessage(err));
+      setSubmitting(false);
     }
   };
 
+  if (getUser()?.role !== 'ORGANIZER') {
+    return <Navigate to="/login" replace />;
+  }
+
+  // the preview is capped like the server (26 x 30) so a typo can't freeze the page
   const previewRows = [];
-  for (let r = 0; r < Number(rows); r++) {
+  for (let r = 0; r < Math.min(Number(rows), 26); r++) {
     const seats = [];
-    for (let c = 0; c < Number(cols); c++) {
+    for (let c = 0; c < Math.min(Number(cols), 30); c++) {
       seats.push(String.fromCharCode(65 + r) + (c + 1));
     }
     previewRows.push(seats);
@@ -69,6 +75,8 @@ export default function CreateEventPage() {
         <form onSubmit={handleSubmit} className="glass rounded-3xl p-8 space-y-4">
           <input
             placeholder="🎭 Event title"
+            aria-label="Event title"
+            required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
@@ -81,40 +89,63 @@ export default function CreateEventPage() {
           />
           <input
             placeholder="📍 Venue"
+            aria-label="Venue"
+            required
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
           />
           <input
             type="datetime-local"
+            aria-label="Starts at"
+            required
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
             className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
           />
           <div className="grid grid-cols-3 gap-4">
-            <input
-              type="number"
-              value={rows}
-              onChange={(e) => setRows(Number(e.target.value))}
-              className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
-            />
-            <input
-              type="number"
-              value={cols}
-              onChange={(e) => setCols(Number(e.target.value))}
-              className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
-            />
-            <input
-              placeholder="💰 Price"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
-            />
+            <label className="block text-xs text-white/50">
+              Rows (max 26)
+              <input
+                type="number"
+                min={1}
+                max={26}
+                required
+                value={rows}
+                onChange={(e) => setRows(Number(e.target.value))}
+                className="mt-1 w-full text-base px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
+              />
+            </label>
+            <label className="block text-xs text-white/50">
+              Seats per row (max 30)
+              <input
+                type="number"
+                min={1}
+                max={30}
+                required
+                value={cols}
+                onChange={(e) => setCols(Number(e.target.value))}
+                className="mt-1 w-full text-base px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
+              />
+            </label>
+            <label className="block text-xs text-white/50">
+              Ticket price ($)
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="💰 Price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="mt-1 w-full text-base px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#a855f7] transition-all duration-300"
+              />
+            </label>
           </div>
           {error && <p className="text-[#fca5a5] text-sm">⚠️ {error}</p>}
           <button
             type="submit"
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#a855f7] via-[#ec4899] to-[#f97316] font-bold text-lg hover:scale-[1.02] hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300"
+            disabled={submitting}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#a855f7] via-[#ec4899] to-[#f97316] font-bold text-lg hover:scale-[1.02] hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 disabled:opacity-50"
           >
             Launch Event 🚀
           </button>

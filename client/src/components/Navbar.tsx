@@ -1,13 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { clearSession, getUser } from '../session';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = getUser();
 
   function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearSession();
     navigate('/login');
   }
 
@@ -26,7 +26,7 @@ export default function Navbar() {
           >
             🎉 Events
           </Link>
-          {user && (
+          {user?.role === 'ATTENDEE' && (
             <Link
               to="/my-bookings"
               className={`text-sm font-medium transition-all duration-300 hover:text-[#a855f7] ${
@@ -48,7 +48,10 @@ export default function Navbar() {
           )}
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] flex items-center justify-center font-bold">
+              <div
+                title={user.name}
+                className="w-9 h-9 rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] flex items-center justify-center font-bold"
+              >
                 {user.name[0]}
               </div>
               <button onClick={logout} className="text-sm text-white/50 hover:text-white transition-all duration-300">

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { api } from '../api';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -12,8 +11,7 @@ export default function EventsPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/events`)
-      .then((res) => res.json())
+    api<any[]>('/events')
       .then((data) => {
         setEvents(data);
         setFiltered(data);
