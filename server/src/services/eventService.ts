@@ -1,4 +1,3 @@
-import { Request } from 'express';
 import prisma from '../db';
 import { formatPrice, isSeatBookable } from '../utils/helpers';
 
@@ -22,9 +21,7 @@ export async function listEvents() {
   });
 }
 
-export async function getEventWithSeats(req: Request) {
-  const id = parseInt(req.params.id);
-
+export async function getEventWithSeats(id: number) {
   return prisma.event.findUnique({
     where: { id },
     include: {

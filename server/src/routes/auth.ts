@@ -1,56 +1,66 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
+import { Prisma, User } from '@prisma/client';
 import prisma from '../db';
+import { config } from '../config';
+import { asyncHandler, HttpError } from '../errors';
+import { signToken } from '../middleware/auth';
+import { loginBody, registerBody } from '../validation';
 
 const router = Router();
 
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, name, role } = req.body;
+router.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: config.authRateLimit,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many attempts, please try again later' },
+  })
+);
 
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'email, password and name are required' });
-    }
+// Compared against when the email is unknown, so a miss takes as long as a wrong password.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+
+function session(user: User) {
+  return {
+    token: signToken(user),
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+  };
+}
+
+router.post(
+  '/register',
+  asyncHandler(async (req, res) => {
+    const { email, password, name, role } = registerBody.parse(req.body);
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        passwordHash,
-        role: role === 'ORGANIZER' ? 'ORGANIZER' : 'ATTENDEE',
-      },
-    });
+    try {
+      const user = await prisma.user.create({ data: { email, name, passwordHash, role } });
+      res.status(201).json(session(user));
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new HttpError(409, 'An account with this email already exists');
+      }
+      throw err;
+    }
+  })
+);
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, 'seatbook-secret-123', {
-      expiresIn: '7d',
-    });
+router.post(
+  '/login',
+  asyncHandler(async (req, res) => {
+    const { email, password } = loginBody.parse(req.body);
 
-    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+    const user = await prisma.user.findUnique({ where: { email } });
+    const ok = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
+    if (!user || !ok) {
+      throw new HttpError(401, 'Invalid email or password');
+    }
 
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, 'seatbook-secret-123', {
-    expiresIn: '7d',
-  });
-
-  res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-});
+    res.json(session(user));
+  })
+);
 
 export default router;

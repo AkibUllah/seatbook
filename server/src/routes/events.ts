@@ -1,60 +1,60 @@
 import { Router } from 'express';
 import prisma from '../db';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { asyncHandler, HttpError } from '../errors';
+import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
 import { getEventWithSeats, listEvents } from '../services/eventService';
 import { formatPrice, seatLabel } from '../utils/helpers';
+import { createEventBody, idParam } from '../validation';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
-  const events = await listEvents();
-  res.json(events);
-});
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    res.json(await listEvents());
+  })
+);
 
-router.get('/:id', async (req, res) => {
-  const event = await getEventWithSeats(req);
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const parsed = idParam.safeParse(req.params);
+    const event = parsed.success ? await getEventWithSeats(parsed.data.id) : null;
 
-  if (!event) {
-    return res.json({ success: false, message: 'Event not found' });
-  }
-
-  const seats = event.seats.map((seat) => ({
-    id: seat.id,
-    row: seat.row,
-    col: seat.col,
-    label: seat.label,
-    available: seat.bookings.length === 0,
-  }));
-
-  res.json({
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    venue: event.venue,
-    startsAt: event.startsAt,
-    price: formatPrice(event.priceCents),
-    rows: event.rows,
-    cols: event.cols,
-    organizer: event.organizer,
-    seats,
-  });
-});
-
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
-  if (req.user!.role !== 'ORGANIZER') {
-    return res.status(403).json({ error: 'Only organizers can create events' });
-  }
-
-  try {
-    const { title, description, venue, startsAt, rows, cols, priceCents } = req.body;
-
-    if (!title || !venue || !startsAt || !rows || !cols) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!event) {
+      throw new HttpError(404, 'Event not found');
     }
 
-    if (rows > 26 || cols > 30) {
-      return res.status(400).json({ msg: 'Seat grid too large (max 26 rows x 30 cols)' });
-    }
+    const seats = event.seats.map((seat) => ({
+      id: seat.id,
+      row: seat.row,
+      col: seat.col,
+      label: seat.label,
+      available: seat.bookings.length === 0,
+    }));
+
+    res.json({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      venue: event.venue,
+      startsAt: event.startsAt,
+      price: formatPrice(event.priceCents),
+      priceCents: event.priceCents,
+      rows: event.rows,
+      cols: event.cols,
+      organizer: event.organizer,
+      seats,
+    });
+  })
+);
+
+router.post(
+  '/',
+  requireAuth,
+  requireRole('ORGANIZER'),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { title, description, venue, startsAt, rows, cols, priceCents } = createEventBody.parse(req.body);
 
     const seats = [];
     for (let r = 0; r < rows; r++) {
@@ -66,22 +66,19 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const event = await prisma.event.create({
       data: {
         title,
-        description: description || '',
+        description,
         venue,
-        startsAt: new Date(startsAt),
+        startsAt,
         rows,
         cols,
-        priceCents: priceCents || 0,
+        priceCents,
         organizerId: req.user!.id,
         seats: { create: seats },
       },
     });
 
     res.status(201).json(event);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send('Something went wrong');
-  }
-});
+  })
+);
 
 export default router;
