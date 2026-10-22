@@ -23,6 +23,16 @@ describe('holding a seat', () => {
     expect(msLeft).toBeLessThanOrEqual(10 * 60_000 + 1000);
   });
 
+  it('ends the hold when the event starts, if that comes first', async () => {
+    const event = await createEvent({ startsInHours: 3 / 60 });
+    const alice = await createUser();
+
+    const res = await hold(alice, event.seats[0].id);
+
+    expect(res.status).toBe(201);
+    expect(new Date(res.body.expiresAt).getTime()).toBe(event.startsAt.getTime());
+  });
+
   it('blocks everyone else from holding or booking the seat', async () => {
     const event = await createEvent();
     const alice = await createUser();

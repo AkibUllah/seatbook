@@ -53,7 +53,7 @@ Postgres must be running at the `DATABASE_URL` in `server/.env`.
 | `JWT_SECRET` | yes | | The server refuses to start without it. Use a long random value per environment. |
 | `CORS_ORIGIN` | | `http://localhost:5173` | Comma-separated list of allowed client origins. |
 | `TRUST_PROXY` | | `0` | Number of reverse proxies in front of the API, so rate limiting sees real client IPs. |
-| `AUTH_RATE_LIMIT` | | `20` | Login/signup attempts per IP per 15 minutes. |
+| `AUTH_RATE_LIMIT` | | `20` | Failed login/signup attempts allowed per IP per 15 minutes. Successful ones don't count. |
 | `PORT` | | `4000` | |
 
 ## Tests
@@ -107,7 +107,7 @@ I reproduced each problem against your original code before fixing it, so the nu
 | The event page showed a **5% service fee and a total the server never charged.** | | Removed. The page shows what the customer actually pays. |
 | Seeded evening talks showed as **12:30 AM**. | | They start at 6:30 PM Dhaka time. |
 
-**Other production basics.** Input validation on every endpoint (seat grid size, dates in the future, whole-number prices, real email addresses, passwords of 8+ characters). Organizers can't book seats and attendees can't create events. Login takes the same time whether or not the email exists, so it doesn't reveal who has an account. Login attempts are rate limited. Security headers, a request size limit, CORS restricted to the app, a health check that checks the database, and graceful shutdown. Organizers can now sign up from the app (the form had no role choice, so it never sent one). After logging in, you go back to the page you came from, such as the event where you picked a seat. The Docker images run Node 24, since Node 20 stopped getting security fixes in April 2026. My Bookings no longer adds cancelled bookings to "Total Spent" or offers to cancel past or cancelled bookings.
+**Other production basics.** Input validation on every endpoint (seat grid size, dates in the future, whole-number prices, real email addresses, passwords of 8+ characters). Organizers can't book seats and attendees can't create events. Login takes the same time whether or not the email exists, so it doesn't reveal who has an account. Failed login attempts are rate limited. Security headers, a request size limit, CORS restricted to the app, a health check that checks the database, and graceful shutdown. Organizers can now sign up from the app (the form had no role choice, so it never sent one). After logging in, you go back to the page you came from, such as the event where you picked a seat. The Docker images run Node 24, since Node 20 stopped getting security fixes in April 2026. My Bookings no longer adds cancelled bookings to "Total Spent" or offers to cancel past or cancelled bookings.
 
 **Seat holds**
 
@@ -129,7 +129,7 @@ How it works, for whoever maintains this next:
 The request left these open, so I decided and wrote them down. Each is easy to change.
 
 - **Up to 4 seats held at once per person per event**, so people can book for family or friends without one person blocking a whole hall.
-- **The 10 minutes start when the seat is held and can't be extended.** When a hold expires, anyone can take the seat at once, including the same person.
+- **The 10 minutes start when the seat is held and can't be extended.** If the event starts sooner, the hold ends when the event starts, since it can't be confirmed after that, and the countdown shows the real time left. When a hold expires, anyone can take the seat at once, including the same person.
 - **Confirming is booking.** There is no payment step (out of scope); see below.
 - **Only attendee accounts book.** Organizers manage events. The original API docs already said this; the code didn't enforce it.
 - **Bookings can be cancelled until the event starts,** and the seat goes straight back on sale.

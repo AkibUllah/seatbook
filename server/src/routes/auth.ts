@@ -16,6 +16,8 @@ router.use(
     limit: config.authRateLimit,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    // brute-force protection: only failed attempts count, so switching accounts doesn't lock anyone out
+    skipSuccessfulRequests: true,
     message: { error: 'Too many attempts, please try again later' },
   })
 );

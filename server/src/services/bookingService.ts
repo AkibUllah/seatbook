@@ -66,12 +66,17 @@ export async function claimSeat(userId: number, seatId: number, status: 'HELD' |
         data: { status: 'EXPIRED' },
       });
 
+      // a hold can't outlast the event starting, since it can't be confirmed after that
+      const holdEnds = new Date(
+        Math.min(now.getTime() + config.holdMinutes * 60_000, seat.event.startsAt.getTime())
+      );
+
       return tx.booking.create({
         data: {
           seatId,
           userId,
           status,
-          expiresAt: status === 'HELD' ? new Date(now.getTime() + config.holdMinutes * 60_000) : null,
+          expiresAt: status === 'HELD' ? holdEnds : null,
         },
         include: { seat: true },
       });
