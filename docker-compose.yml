@@ -10,10 +10,13 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U seatbook"]
+      # TCP, not the socket: the temporary server initdb starts only listens on the socket
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U seatbook -d seatbook"]
       interval: 2s
       timeout: 3s
-      retries: 20
+      retries: 30
+      # first boot runs initdb, which can take minutes on a slow or busy machine
+      start_period: 300s
 
   server:
     build: ./server
