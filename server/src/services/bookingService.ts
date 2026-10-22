@@ -9,13 +9,21 @@ export function activeBookingWhere(now: Date): Prisma.BookingWhereInput {
   return { OR: [{ status: 'CONFIRMED' }, { status: 'HELD', expiresAt: { gt: now } }] };
 }
 
-function isUniqueViolation(err: unknown) {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
+function prismaCode(err: unknown) {
+  return err instanceof Prisma.PrismaClientKnownRequestError ? err.code : undefined;
 }
 
 // Hold a seat for config.holdMinutes, or book it outright.
 export async function claimSeat(userId: number, seatId: number, status: 'HELD' | 'CONFIRMED') {
   const now = new Date();
+
+  // Cheap early answer for the common case when a popular event opens: most
+  // requests are for seats already taken, and they shouldn't each need a
+  // transaction and a pooled connection. The transaction below re-checks.
+  const takenNow = await prisma.booking.findFirst({ where: { seatId, ...activeBookingWhere(now) } });
+  if (takenNow && takenNow.userId !== userId) {
+    throw new HttpError(409, 'Sorry, this seat is taken');
+  }
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -63,11 +71,15 @@ export async function claimSeat(userId: number, seatId: number, status: 'HELD' |
         },
         include: { seat: true },
       });
-    });
+    }, { maxWait: 10_000, timeout: 10_000 });
   } catch (err) {
     // someone else claimed the seat between our check and our insert
-    if (isUniqueViolation(err)) {
+    if (prismaCode(err) === 'P2002') {
       throw new HttpError(409, 'Sorry, this seat is taken');
+    }
+    // every pooled connection stayed busy for maxWait
+    if (prismaCode(err) === 'P2028') {
+      throw new HttpError(503, 'We are very busy right now, please try again');
     }
     throw err;
   }
