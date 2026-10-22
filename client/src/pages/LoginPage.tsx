@@ -4,11 +4,22 @@ import GradientButton from '../components/GradientButton';
 import { api, errorMessage } from '../api';
 import { saveSession, SessionUser } from '../session';
 
+// Where to go after login, but only somewhere on this site, so a crafted link can't
+// send people to another one. Resolve it like the browser will: string checks
+// miss tricks such as "/\evil.com", which browsers treat as "//evil.com".
+function sameSitePath(next: string | null) {
+  if (!next) return '/';
+  try {
+    const url = new URL(next, window.location.origin);
+    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
+}
+
 export default function LoginPage() {
   const [params] = useSearchParams();
-  // only same-site paths, so the login page can't be used to bounce people to another site
-  const next = params.get('next');
-  const returnTo = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  const returnTo = sameSitePath(params.get('next'));
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
