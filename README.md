@@ -149,7 +149,7 @@ In order of importance:
 5. **Accounts.** Email verification and password reset (out of scope here). Logins last 7 days and live in the browser's local storage, and can't be revoked. Move to secure cookies with shorter sessions.
 6. **Currency.** Please confirm whether you sell tickets in USD or BDT. Switching is a one-line change in `formatPrice` plus real prices.
 7. **Mobile.** The pages use a fixed desktop layout and don't work well on a phone, which is probably where many customers will book.
-8. **More than one server.** The login rate limit is kept in memory, so with several API instances it needs a shared store such as Redis.
+8. **More than one server.** The login rate limit is kept in memory, so with several API instances it needs a shared store such as Redis. Hold expiry is compared against the API server's clock, so several servers need synced clocks, or the checks should move to the database's clock.
 
 ### Weakest part of my work
 
@@ -170,4 +170,4 @@ It also made smaller mistakes that were caught before they were committed, most 
 - **In a real browser, with two users at once:** Alice holds a seat and the countdown ticks, Bob sees it held and can't click it, Alice confirms, a hold expires while the page is open and the seat goes back on sale, Bob takes it right after, the 4-hold limit, releasing, cancelling from My Bookings (totals update), a past event with every seat disabled, returning to the event after logging in, organizer signup and event creation.
 - **Load:** 500 simultaneous hold requests for a 24-seat event, with exactly 24 holds and no errors. The first run of this test found 178 errors, which led to the fix described above.
 - **From a clean start:** a fresh `git clone` of this repo, then `docker compose up --build`, then all of the above.
-- **A second review:** a separate AI review of all the changes, with no access to my reasoning, found no serious problems. Its three minor findings (an out-of-order refresh showing a stale seat map, toasts closing early, a deleted account getting a 500) are fixed.
+- **Independent reviews:** two separate AI reviews of the code, with no access to my reasoning, found no serious problems. Their minor findings are fixed: an out-of-order refresh showing a stale seat map, toasts closing early, a deleted account getting a 500, a hold outlasting the event start (the countdown showed 10:00 when only 3 minutes were left), and successful logins counting toward the login limit. My own re-checks also found and fixed released holds showing up as cancelled bookings, a login loop for attendees on the create-event page, and the redirect bypass above.
