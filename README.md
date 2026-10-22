@@ -21,7 +21,7 @@ docker compose up --build
 
 The database is migrated and seeded on first start. To start from a clean database: `docker compose down -v`. The first start initialises Postgres, which can take a few minutes on a slow machine; the server waits for it.
 
-**After changing `schema.prisma`:** create the migration from your machine (`cd server && npx prisma migrate dev`, with `DATABASE_URL` pointing at `localhost:5433`), then `docker compose restart server`. **Check the generated SQL does not drop `Booking_one_active_per_seat`**: it is a partial unique index that Prisma can't express in the schema, it only exists in the migrations, and it is what prevents double booking. The integration tests fail if it goes missing.
+**After changing `schema.prisma`:** create the migration from your machine (`cd server && npx prisma migrate dev`, with `DATABASE_URL` pointing at `localhost:5433`), then `docker compose restart server`. **Know about `Booking_one_active_per_seat`**: it is a partial unique index that Prisma can't express in the schema, so it only exists in the migrations, and it is what prevents double booking. Prisma 5 leaves it alone when generating migrations (checked), and the integration tests fail if it ever goes missing.
 
 ### Seeded accounts
 
@@ -150,7 +150,7 @@ In order of importance:
 
 ### Weakest part of my work
 
-**Everything rests on one database index that Prisma doesn't know about.** The rule "one active booking per seat" is a partial unique index. Prisma's schema file can't express it, so it only exists in the migration SQL. If someone later generates a migration without reading it, Prisma may add a line that drops the index, and double booking would silently come back. I've put a note in `schema.prisma` and this README, and the integration tests fail if the index is missing (I checked by dropping it: 5 of 20 simultaneous requests got the same seat). Still, it relies on people running the tests.
+**Everything rests on one database index that the schema file doesn't show.** The rule "one active booking per seat" is a partial unique index. Prisma's schema file can't express it, so it lives only in the migration SQL. A developer reading `schema.prisma` to understand the data can't see the most important rule in it. I checked that Prisma 5.22 doesn't try to drop the index when generating new migrations, but that's tool behaviour I'm relying on, not something the schema guarantees: a future Prisma upgrade, or someone squashing or rewriting the migrations, could lose it, and double booking would silently come back. I've put a note in `schema.prisma` and this README, and the integration tests fail if the index is missing (I checked by dropping it: 5 of 20 simultaneous requests got the same seat). Still, it relies on people running the tests.
 
 Smaller weaknesses: confirming several held seats confirms each one separately, so in a rare case (one hold expiring mid-confirm) you could get some seats and not others. The page tells you which. Others see new holds up to 15 seconds late (the server always has the final say, so this only affects the display).
 
@@ -158,7 +158,7 @@ Smaller weaknesses: confirming several held seats confirms each one separately, 
 
 I used Claude Code throughout (transcripts in `ai-transcripts/`). The clearest case where it was wrong: **it recommended switching prices to Bangladeshi taka**, reasoning that the business is in Dhaka. I asked why, and whether the brief mentioned taka anywhere. It didn't, and the existing unit test explicitly expects dollars (`formatPrice(1500)` → `$15.00`). Swapping only the symbol would also have turned a $40 workshop into ৳40, about 35 US cents. Changing currency would have been an unrequested product change based on a guess. So prices stay in dollars, and the currency question is on the list above for you to decide.
 
-It also made smaller mistakes that were caught before they were committed, most of them by the AI itself when re-checking its work. It first listed organizer self-signup as a security bug to remove, though the brief says signing up as an organizer must keep working. One test it wrote checked a hardcoded email and would have passed for the wrong reason. And it initially trusted the `X-Forwarded-For` header unconditionally, which would let anyone bypass the login rate limit.
+It also made smaller mistakes that were caught before they were committed, most of them by the AI itself when re-checking its work. It first listed organizer self-signup as a security bug to remove, though the brief says signing up as an organizer must keep working. One test it wrote checked a hardcoded email and would have passed for the wrong reason. And it initially trusted the `X-Forwarded-For` header unconditionally, which would let anyone bypass the login rate limit. It also overstated a risk in the first draft of this note, claiming Prisma would try to drop the partial index in future migrations. A second review pass questioned that, and checking showed Prisma 5.22 leaves the index alone, so the weakest-part section above was corrected.
 
 ### How I checked it works
 
