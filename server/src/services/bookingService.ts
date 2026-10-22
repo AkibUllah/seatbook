@@ -116,8 +116,11 @@ export async function confirmHold(userId: number, holdId: number) {
   if (!booking) {
     throw new HttpError(404, 'Hold not found');
   }
-  if (booking.status === 'CANCELLED') {
+  if (booking.status === 'RELEASED') {
     throw new HttpError(409, 'This hold was released');
+  }
+  if (booking.status === 'CANCELLED') {
+    throw new HttpError(409, 'This booking was cancelled');
   }
   if (booking.seat.event.startsAt <= now) {
     throw new HttpError(409, 'This event has already started');
@@ -128,7 +131,7 @@ export async function confirmHold(userId: number, holdId: number) {
 export async function releaseHold(userId: number, holdId: number) {
   const { count } = await prisma.booking.updateMany({
     where: { id: holdId, userId, status: 'HELD' },
-    data: { status: 'CANCELLED', cancelledAt: new Date() },
+    data: { status: 'RELEASED', cancelledAt: new Date() },
   });
   if (count === 0) {
     throw new HttpError(404, 'Hold not found');

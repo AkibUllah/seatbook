@@ -18,6 +18,7 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   EXPIRED
+  RELEASED
 }
 
 model User {

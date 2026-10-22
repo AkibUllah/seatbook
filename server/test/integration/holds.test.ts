@@ -197,6 +197,18 @@ describe('releasing a hold', () => {
     expect((await hold(bob, seatId)).status).toBe(201);
   });
 
+  it('does not show up as a cancelled booking', async () => {
+    const event = await createEvent();
+    const alice = await createUser();
+    const h = await hold(alice, event.seats[0].id);
+    await api().delete(`/holds/${h.body.id}`).set('Authorization', alice.auth);
+
+    const mine = await api().get('/bookings/mine').set('Authorization', alice.auth);
+    expect(mine.body).toHaveLength(0);
+    const confirm = await api().post(`/holds/${h.body.id}/confirm`).set('Authorization', alice.auth);
+    expect(confirm.status).toBe(409);
+  });
+
   it("cannot release someone else's hold", async () => {
     const event = await createEvent();
     const alice = await createUser();
