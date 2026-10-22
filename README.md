@@ -35,13 +35,15 @@ All passwords are `password123`. The seed is skipped when `NODE_ENV=production`.
 
 ### Without Docker
 
+Needs Node 22.12+ (the Docker images use Node 24) and a Postgres.
+
 ```bash
 cd server && cp .env.example .env   # then set JWT_SECRET (openssl rand -hex 32)
 npm install && npm run db:migrate && npm run db:seed && npm run dev
 cd client && npm install && npm run dev
 ```
 
-You need a Postgres running at the `DATABASE_URL` in `server/.env`.
+Postgres must be running at the `DATABASE_URL` in `server/.env`.
 
 ### Configuration (server)
 
