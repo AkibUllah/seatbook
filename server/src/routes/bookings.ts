@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../db';
 import { asyncHandler, HttpError } from '../errors';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
@@ -23,25 +24,23 @@ router.post(
       throw new HttpError(404, 'Seat not found');
     }
 
-    if (seat.event.startsAt < new Date()) {
-      throw new HttpError(400, 'This event has already started');
+    if (seat.event.startsAt <= new Date()) {
+      throw new HttpError(409, 'This event has already started');
     }
 
-    const existing = await prisma.booking.findFirst({
-      where: { seatId: seat.id, status: 'CONFIRMED' },
-    });
-
-    if (existing) {
-      throw new HttpError(409, 'Seat already booked');
+    // No "is it free?" check first: two requests could both pass it. The
+    // partial unique index on active bookings decides who gets the seat.
+    let booking;
+    try {
+      booking = await prisma.booking.create({
+        data: { seatId: seat.id, userId: req.user!.id, status: 'CONFIRMED' },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new HttpError(409, 'Seat already booked');
+      }
+      throw err;
     }
-
-    const booking = await prisma.booking.create({
-      data: {
-        seatId: seat.id,
-        userId: req.user!.id,
-        status: 'CONFIRMED',
-      },
-    });
 
     res.status(201).json(booking);
   })
