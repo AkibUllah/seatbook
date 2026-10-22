@@ -7683,3 +7683,373 @@ The fresh clone from GitHub works on Node 24: 36 out of 36 tests pass, and the s
 ```bash
 cd /home/akib/Desktop/dev_monks/seatbook && docker compose up -d 2>&1 | tail -1; for i in $(seq 1 120); do curl -sf localhost:4000/health >/dev/null && echo "local app running" && break; sleep 5; done; python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git status -sb | head -1 && git log --oneline | wc -l
 ```
+
+<details><summary>Result</summary>
+
+```
+Container seatbook-client-1  Started
+local app running
+wrote ai-transcripts/claude-code-session.md: 426 blocks
+0
+## main...origin/main
+20
+```
+
+</details>
+
+## 🤖 Claude
+
+I found one real problem and a few inaccurate README lines. All fixed and pushed; nothing else is left.
+
+**The real problem:** the Docker images ran Node 20, which stopped getting security fixes in April 2026. The test tool, Vitest 5, also officially needs Node 22.12 or newer and only worked by luck. I moved both images to Node 24. Everything passes on it from a fresh clone of the GitHub repo: the 36 integration tests and 3 unit tests, the client build, and the browser runs.
+
+**README corrections, from a line-by-line read against the code:**
+- It said the booking code inserts without checking first. Since the load-test fix, the code does a quick check first, and the database rule is still what guarantees one booking per seat. Reworded to match.
+- It said organizers could sign up "again", but the form never had that option.
+- Added what changed today: the Node 24 upgrade and returning to the event after login.
+- "How I checked" now covers cancelling and past events in the browser, the fresh-clone start, and the independent review.
+
+**Checked and fine:**
+- No leftover debug code or TODOs. The one unused variable the compiler flagged is required by Express's middleware signature, so it stays.
+- No private details in the repo, and your email is redacted from the transcript.
+- Every commit is under your name, with no co-author lines.
+- The seeded organizer is "Karim Rahman", matching the brief's "Mr. Rahman's account".
+
+The repo has 20 commits and is up to date with GitHub. The app is running locally at http://localhost:5173 if you want to try it; the README lists the accounts (password `password123`).
+
+**Left for you:**
+1. **Submit** `https://github.com/AkibUllah/seatbook` through the Google Form before 30 October, end of day Bangladesh time.
+2. **Re-export the transcript right before submitting.** It's current up to this check, but this message isn't in it yet.
+3. **Study [seatbook-interview-guide.md](../seatbook-interview-guide.md)** for the 10-minute walkthrough without AI. Make sure you can explain three things in your own words: why the database rule stops double booking and a code check can't, how a hold expires, and how confirming works.
+
+## 🧑 User
+
+please check 3rd time if anything left please
+
+## 🤖 Claude
+
+Third pass. I'll focus on the newest code, since it's had the least review. The login redirect added in the first re-check is the most recent and only got a basic test.
+
+There's a classic bypass I should check: browsers treat a backslash like a forward slash, so `/\evil.com` can become `//evil.com`, which is another website. My check only rejects paths starting with `//`. Testing it:
+
+**🔧 Bash**
+
+*Test login redirect bypass payloads*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; cat > $S/bypass.mjs <<'EOF'
+import puppeteer from 'puppeteer-core';
+const APP = 'http://localhost:5173';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+for (const next of ['/events/2', '//evil.example.com/x', '/\\evil.example.com/x', '/%5Cevil.example.com', 'https://evil.example.com', '/\t/evil.example.com']) {
+  const ctx = await browser.createBrowserContext(); const p = await ctx.newPage();
+  await p.goto(`${APP}/login?next=${encodeURIComponent(next)}`);
+  await p.waitForSelector('input[aria-label="Email address"]');
+  await p.type('input[aria-label="Email address"]', 'bob@seatbook.test');
+  await p.type('input[aria-label="Password"]', 'password123');
+  await Promise.all([p.waitForNavigation({ timeout: 8000 }).catch(() => {}), p.click('button[type=submit]')]);
+  await new Promise((r) => setTimeout(r, 800));
+  console.log(JSON.stringify(next).padEnd(28), '->', p.url());
+  await ctx.close();
+}
+await browser.close();
+EOF
+node $S/bypass.mjs 2>&1 | grep -v "^\s*at " | tail -7
+```
+
+<details><summary>Result</summary>
+
+```
+"/events/2"                  -> http://localhost:5173/events/2
+"//evil.example.com/x"       -> http://localhost:5173/
+"/\\evil.example.com/x"      -> chrome-error://chromewebdata/
+"/%5Cevil.example.com"       -> http://localhost:5173/%5Cevil.example.com
+"https://evil.example.com"   -> http://localhost:5173/
+"/\t/evil.example.com"       -> chrome-error://chromewebdata/
+```
+
+</details>
+
+**🔧 Bash**
+
+*Locate redirect code in LoginPage*
+
+```bash
+grep -n "next\|returnTo" client/src/pages/LoginPage.tsx
+```
+
+<details><summary>Result</summary>
+
+```
+10:  const next = params.get('next');
+11:  const returnTo = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+31:      window.location.href = returnTo;
+```
+
+</details>
+
+**🔧 Bash**
+
+*Resolve next with URL parser and compare origin*
+
+```bash
+python3 - <<'EOF'
+p='client/src/pages/LoginPage.tsx'; s=open(p).read()
+a="""  // only same-site paths, so the login page can't be used to bounce people to another site
+  const next = params.get('next');
+  const returnTo = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+"""
+b="""  const returnTo = sameSitePath(params.get('next'));
+"""
+assert a in s; s=s.replace(a,b)
+a2="export default function LoginPage() {"
+b2="""// Where to go after login, but only somewhere on this site, so a crafted link can't
+// send people to another one. Resolve it like the browser will: string checks
+// miss tricks such as "/\\\\evil.com", which browsers treat as "//evil.com".
+function sameSitePath(next: string | null) {
+  if (!next) return '/';
+  try {
+    const url = new URL(next, window.location.origin);
+    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
+}
+
+export default function LoginPage() {"""
+s=s.replace(a2,b2,1)
+open(p,'w').write(s)
+EOF
+sed -n 1,25p client/src/pages/LoginPage.tsx; docker compose exec -T client npx tsc --noEmit && echo TYPECHECK OK
+```
+
+<details><summary>Result</summary>
+
+```
+import { useState, FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import GradientButton from '../components/GradientButton';
+import { api, errorMessage } from '../api';
+import { saveSession, SessionUser } from '../session';
+
+// Where to go after login, but only somewhere on this site, so a crafted link can't
+// send people to another one. Resolve it like the browser will: string checks
+// miss tricks such as "/\\evil.com", which browsers treat as "//evil.com".
+function sameSitePath(next: string | null) {
+  if (!next) return '/';
+  try {
+    const url = new URL(next, window.location.origin);
+    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
+}
+
+export default function LoginPage() {
+  const [params] = useSearchParams();
+  const returnTo = sameSitePath(params.get('next'));
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+TYPECHECK OK
+```
+
+</details>
+
+## 🤖 Claude
+
+The comment shows two backslashes where it means one. I'll fix that, then rerun every bypass attempt:
+
+**🔧 Bash**
+
+*Fix comment and rerun bypass tests*
+
+```bash
+sed -i 's|miss tricks such as "/\\\\\\\\evil.com"|miss tricks such as "/\\\\evil.com"|' client/src/pages/LoginPage.tsx && grep -n "tricks such as" client/src/pages/LoginPage.tsx && sleep 2 && S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e && node $S/bypass.mjs 2>&1 | grep -v "^\s*at " | tail -7
+```
+
+<details><summary>Result</summary>
+
+```
+9:// miss tricks such as "/\\evil.com", which browsers treat as "//evil.com".
+"/events/2"                  -> http://localhost:5173/events/2
+"//evil.example.com/x"       -> http://localhost:5173/
+"/\\evil.example.com/x"      -> http://localhost:5173/
+"/%5Cevil.example.com"       -> http://localhost:5173/%5Cevil.example.com
+"https://evil.example.com"   -> http://localhost:5173/
+"/\t/evil.example.com"       -> http://localhost:5173/
+```
+
+</details>
+
+**🔧 Bash**
+
+*Fix comment and commit redirect fix*
+
+```bash
+python3 - <<'EOF'
+p='client/src/pages/LoginPage.tsx'; s=open(p).read()
+s=s.replace('such as "/\\\\evil.com"', 'such as "/\\evil.com"')
+open(p,'w').write(s)
+EOF
+grep -n "tricks such as" client/src/pages/LoginPage.tsx; docker compose exec -T client npx tsc --noEmit && echo OK && git add client && git commit -q -m "Fix open redirect in the post-login return path
+
+The check only rejected paths starting with //. Browsers treat a
+backslash like a slash, so ?next=/\\evil.example.com (and a variant
+with a tab) passed the check and sent people to another site after
+logging in. Resolve the value with the URL parser and only follow it
+if it stays on this origin. Checked in a browser with //host, /\\host,
+/<tab>/host and absolute URLs: all land on the home page now." && git log --oneline | head -1
+```
+
+<details><summary>Result</summary>
+
+```
+9:// miss tricks such as "/\evil.com", which browsers treat as "//evil.com".
+OK
+237f2b5 Fix open redirect in the post-login return path
+```
+
+</details>
+
+**🔧 Bash**
+
+*Record mistake; scan for XSS and SQL injection sinks*
+
+```bash
+python3 - <<'EOF'
+p='README.md'; s=open(p).read()
+a="so the weakest-part section above was corrected."
+b=a+" And the \"return to where you were after login\" change it added in a late pass checked the path with string rules that a backslash could get around (`?next=/\\evil.com` went to another site). A later check caught that; it now resolves the address with the browser's URL parser and only follows it if it stays on this site."
+assert a in s; s=s.replace(a,b); open(p,'w').write(s)
+p='../seatbook-interview-guide.md'; s=open(p).read()
+a="and it trusted `X-Forwarded-For` unconditionally, which would allow bypassing the rate limit."
+b=a+" Later, its login-redirect check could be bypassed with a backslash (`/\\evil.com`); a third check caught that, and it's fixed by parsing the URL and comparing origins."
+assert a in s, 'guide'; s=s.replace(a,b); open(p,'w').write(s)
+EOF
+grep -c "backslash" README.md ../seatbook-interview-guide.md; echo "== XSS sinks / eval in client"; grep -rnE "dangerouslySetInnerHTML|innerHTML|eval\(|new Function" client/src || echo none; echo "== raw SQL with interpolation"; grep -rnE "queryRawUnsafe|executeRawUnsafe" server/src || echo "none in src (only the test helper's fixed TRUNCATE)"
+```
+
+<details><summary>Result</summary>
+
+```
+../seatbook-interview-guide.md:1
+README.md:1
+== XSS sinks / eval in client
+none
+== raw SQL with interpolation
+none in src (only the test helper's fixed TRUNCATE)
+```
+
+</details>
+
+**🔧 Bash**
+
+*Browser-test behaviour with an expired login*
+
+```bash
+EXP=$(docker compose exec -T server node -e "console.log(require('jsonwebtoken').sign({id:2,email:'alice@seatbook.test',role:'ATTENDEE'}, process.env.JWT_SECRET, {expiresIn:-10}))") && S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e && cat > $S/expired.mjs <<EOF
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+const p = await browser.newPage();
+await p.goto('http://localhost:5173/');
+await p.evaluate(() => { localStorage.setItem('token', '$EXP'); localStorage.setItem('user', JSON.stringify({ id: 2, email: 'alice@seatbook.test', name: 'Alice Karim', role: 'ATTENDEE' })); });
+await p.goto('http://localhost:5173/my-bookings');
+await p.waitForFunction(() => location.pathname === '/login', { timeout: 10000 }).catch(() => {});
+console.log('expired token on My Bookings ->', new URL(p.url()).pathname, '| token cleared:', await p.evaluate(() => localStorage.getItem('token') === null));
+await p.evaluate(() => { localStorage.setItem('token', '$EXP'); localStorage.setItem('user', JSON.stringify({ id: 2, email: 'alice@seatbook.test', name: 'Alice Karim', role: 'ATTENDEE' })); });
+await p.goto('http://localhost:5173/events/2');
+await p.waitForSelector('button[aria-label^="Seat F1,"], button[aria-label^="Seat D1,"]');
+console.log('expired token can still browse event page:', new URL(p.url()).pathname);
+await new Promise((r) => setTimeout(r, 1000));
+await (await p.\$('button[aria-label^="Seat D1,"]')).click();
+await p.waitForFunction(() => location.pathname === '/login', { timeout: 10000 }).catch(() => {});
+console.log('expired token tries to hold ->', new URL(p.url()).pathname);
+await browser.close();
+EOF
+node $S/expired.mjs 2>&1 | grep -v "^\s*at " | tail -4
+```
+
+<details><summary>Result</summary>
+
+```
+expired token on My Bookings -> /login | token cleared: true
+expired token can still browse event page: /events/2
+expired token tries to hold -> /login
+```
+
+</details>
+
+**🔧 Bash**
+
+*Keep return path on session-expiry redirect*
+
+```bash
+python3 - <<'EOF'
+p='client/src/api.ts'; s=open(p).read()
+a="    window.location.href = '/login';"
+b="    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;"
+assert a in s; s=s.replace(a,b); open(p,'w').write(s)
+EOF
+docker compose exec -T client npx tsc --noEmit && echo OK && sleep 2 && S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e && sed -i "s|console.log('expired token tries to hold ->', new URL(p.url()).pathname);|console.log('expired token tries to hold ->', new URL(p.url()).pathname + new URL(p.url()).search);|" $S/expired.mjs && node $S/expired.mjs 2>&1 | tail -1
+```
+
+<details><summary>Result</summary>
+
+```
+OK
+expired token tries to hold -> /login?next=%2Fevents%2F2
+```
+
+</details>
+
+## 🤖 Claude
+
+Now full regression: all tests, the build and every browser script. Then commit and push.
+
+**🔧 Bash**
+
+*Full regression, commit and push*
+
+```bash
+docker compose exec -T server npm test 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep "Tests "; docker compose exec -T server npm run test:integration 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E "Tests |FAIL"; docker compose exec -T client npm run build 2>&1 | tail -1; S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; docker exec seatbook-db-1 psql -U seatbook -tAc "update \"Booking\" set status='CANCELLED' where status='HELD'" >/dev/null; node $S/run.mjs $S/shots 2>&1 | grep -E "toast:|nav:"; node $S/redirect.mjs 2>&1 | tail -3; node $S/cancel.mjs $S/shots 2>&1 | grep -E "after:|past event"
+git add -A client README.md && git commit -q -m "Return to the current page after a session expires
+
+When the API answers 401 for an expired login, the client sent people
+to /login and they lost their place. Pass the current path as next,
+like the other login redirects. Also record the redirect bypass in the
+README's list of AI mistakes." && git push -q origin main && git log --oneline | head -2
+```
+
+<details><summary>Result</summary>
+
+```
+Tests  3 passed (3)
+      Tests  36 passed (36)
+✓ built in 9.36s
+toast: 🎉 Booked! Seat C3 is yours.
+toast: Your hold ran out and the seat went back on sale
+toast: You can hold up to 4 seats at a time for an event
+nav: ✨ Seatbook | 🎉 Events | ➕ Create Event | N | Logout
+after login: /events/2
+my-bookings round trip: /my-bookings
+next=//evil lands on: http://localhost:5173/
+after:  active/upcoming/spent = 2 / 1 / $15.00 | cancel buttons: 1 | cancelled rows: 1
+past event: badge ⏰ ENDED | seats disabled 15/15 | This event has already started.
+af61fc0 Return to the current page after a session expires
+237f2b5 Fix open redirect in the post-login return path
+```
+
+</details>
+
+## 🤖 Claude
+
+All green. Last step, the transcript:
+
+**🔧 Bash**
+
+*Re-export transcript and push*
+
+```bash
+python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git status -sb | head -1 && git log --oneline | wc -l
+```
