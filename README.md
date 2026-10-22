@@ -118,6 +118,7 @@ I reproduced each problem against your original code before fixing it, so the nu
 How it works, for whoever maintains this next:
 
 - **A hold is a booking with status `HELD` and an `expiresAt`.** The same database index protects holds and bookings, so a seat can never be held by one person and booked by another.
+- **A booking row's status says how it ended:** `HELD` → `CONFIRMED` (booked), `RELEASED` (the attendee let it go) or `EXPIRED` (time ran out). A `CONFIRMED` booking can become `CANCELLED`. Only `HELD` (not yet expired) and `CONFIRMED` occupy the seat. My Bookings shows `CONFIRMED` and `CANCELLED` only.
 - **Expiry is decided when reading,** not by a timer: a seat is taken if it has a `CONFIRMED` booking or a `HELD` one whose `expiresAt` is still in the future. A seat goes back on sale at exactly the right moment even if the server was restarted. A job marks old holds `EXPIRED` every minute, but only for tidiness; nothing depends on it.
 - **Confirming is a single conditional update** ("set CONFIRMED where it's mine, still held, not expired"), so it can't race with expiry or with someone grabbing the seat the moment it expires.
 - **The 4-hold limit can't be beaten by clicking fast:** holds by the same person are processed one at a time (row lock on the user).
