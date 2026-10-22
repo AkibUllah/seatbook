@@ -28,7 +28,7 @@ export async function api<T = unknown>(path: string, options: { method?: string;
   // expired or invalid session: start over at the login page
   if (res.status === 401 && token && !path.startsWith('/auth')) {
     clearSession();
-    window.location.href = '/login';
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
   }
 
   if (!res.ok) {
