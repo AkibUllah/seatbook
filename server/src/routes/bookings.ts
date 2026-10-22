@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { Prisma } from '@prisma/client';
 import prisma from '../db';
 import { asyncHandler, HttpError } from '../errors';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import { claimSeat } from '../services/bookingService';
 import { formatPrice } from '../utils/helpers';
 import { idParam, seatBody } from '../validation';
 
@@ -15,34 +15,10 @@ router.post(
   asyncHandler(async (req: AuthRequest, res) => {
     const { seatId } = seatBody.parse(req.body);
 
-    const seat = await prisma.seat.findUnique({
-      where: { id: seatId },
-      include: { event: true },
-    });
+    const booking = await claimSeat(req.user!.id, seatId, 'CONFIRMED');
 
-    if (!seat) {
-      throw new HttpError(404, 'Seat not found');
-    }
-
-    if (seat.event.startsAt <= new Date()) {
-      throw new HttpError(409, 'This event has already started');
-    }
-
-    // No "is it free?" check first: two requests could both pass it. The
-    // partial unique index on active bookings decides who gets the seat.
-    let booking;
-    try {
-      booking = await prisma.booking.create({
-        data: { seatId: seat.id, userId: req.user!.id, status: 'CONFIRMED' },
-      });
-    } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new HttpError(409, 'Seat already booked');
-      }
-      throw err;
-    }
-
-    res.status(201).json(booking);
+    const { seat, ...rest } = booking;
+    res.status(201).json(rest);
   })
 );
 
@@ -50,7 +26,8 @@ router.get(
   '/mine',
   asyncHandler(async (req: AuthRequest, res) => {
     const bookings = await prisma.booking.findMany({
-      where: { userId: req.user!.id },
+      // holds live on the event page; this is the booking history
+      where: { userId: req.user!.id, status: { in: ['CONFIRMED', 'CANCELLED'] } },
       orderBy: { createdAt: 'desc' },
       include: { seat: { include: { event: true } } },
     });

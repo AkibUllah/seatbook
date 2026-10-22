@@ -14,8 +14,10 @@ enum Role {
 }
 
 enum BookingStatus {
+  HELD
   CONFIRMED
   CANCELLED
+  EXPIRED
 }
 
 model User {
@@ -65,8 +67,11 @@ model Booking {
   status      BookingStatus @default(CONFIRMED)
   createdAt   DateTime      @default(now())
   cancelledAt DateTime?
+  // set while HELD; the hold lapses at this time
+  expiresAt   DateTime?
 
   // Also: a partial unique index on seatId for active bookings, created in the
   // migrations because Prisma can't declare one. It is what prevents double booking.
   @@index([userId])
+  @@index([status, expiresAt])
 }

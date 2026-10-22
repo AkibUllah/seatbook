@@ -7,6 +7,7 @@ import { asyncHandler, errorHandler, notFound } from './errors';
 import authRoutes from './routes/auth';
 import eventRoutes from './routes/events';
 import bookingRoutes from './routes/bookings';
+import holdRoutes from './routes/holds';
 
 export function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp() {
   app.use('/auth', authRoutes);
   app.use('/events', eventRoutes);
   app.use('/bookings', bookingRoutes);
+  app.use('/holds', holdRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

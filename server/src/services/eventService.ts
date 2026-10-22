@@ -1,15 +1,16 @@
 import prisma from '../db';
 import { formatPrice } from '../utils/helpers';
+import { activeBookingWhere } from './bookingService';
 
 export async function listEvents() {
+  const now = new Date();
   const events = await prisma.event.findMany({
     orderBy: { startsAt: 'asc' },
     include: {
-      _count: { select: { seats: { where: { bookings: { some: { status: 'CONFIRMED' } } } } } },
+      _count: { select: { seats: { where: { bookings: { some: activeBookingWhere(now) } } } } },
     },
   });
 
-  const now = new Date();
   return events.map((event) => {
     const totalSeats = event.rows * event.cols;
     return {
@@ -25,14 +26,19 @@ export async function listEvents() {
   });
 }
 
-export async function getEventWithSeats(id: number) {
+export async function getEventWithSeats(id: number, now: Date) {
   return prisma.event.findUnique({
     where: { id },
     include: {
       organizer: { select: { id: true, name: true } },
       seats: {
         orderBy: [{ row: 'asc' }, { col: 'asc' }],
-        include: { bookings: { where: { status: 'CONFIRMED' } } },
+        include: {
+          bookings: {
+            where: activeBookingWhere(now),
+            select: { id: true, userId: true, status: true, expiresAt: true },
+          },
+        },
       },
     },
   });

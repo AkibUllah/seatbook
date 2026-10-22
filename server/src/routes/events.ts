@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import prisma from '../db';
 import { asyncHandler, HttpError } from '../errors';
-import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
+import { config } from '../config';
+import { optionalAuth, requireAuth, requireRole, AuthRequest } from '../middleware/auth';
 import { getEventWithSeats, listEvents } from '../services/eventService';
 import { formatPrice, seatLabel } from '../utils/helpers';
 import { createEventBody, idParam } from '../validation';
@@ -17,21 +18,37 @@ router.get(
 
 router.get(
   '/:id',
-  asyncHandler(async (req, res) => {
+  optionalAuth,
+  asyncHandler(async (req: AuthRequest, res) => {
     const parsed = idParam.safeParse(req.params);
-    const event = parsed.success ? await getEventWithSeats(parsed.data.id) : null;
+    const now = new Date();
+    const event = parsed.success ? await getEventWithSeats(parsed.data.id, now) : null;
 
     if (!event) {
       throw new HttpError(404, 'Event not found');
     }
 
-    const seats = event.seats.map((seat) => ({
-      id: seat.id,
-      row: seat.row,
-      col: seat.col,
-      label: seat.label,
-      available: seat.bookings.length === 0,
-    }));
+    const userId = req.user?.id;
+    const isPast = event.startsAt <= now;
+    const seats = event.seats.map((seat) => {
+      // the unique index guarantees at most one active booking per seat
+      const active = seat.bookings[0];
+      return {
+        id: seat.id,
+        row: seat.row,
+        col: seat.col,
+        label: seat.label,
+        status: !active ? 'available' : active.status === 'HELD' ? 'held' : 'booked',
+        mine: active !== undefined && active.userId === userId,
+        available: !active && !isPast,
+      };
+    });
+
+    const myHolds = event.seats.flatMap((seat) =>
+      seat.bookings
+        .filter((b) => b.status === 'HELD' && b.userId === userId)
+        .map((b) => ({ id: b.id, seatId: seat.id, label: seat.label, expiresAt: b.expiresAt }))
+    );
 
     res.json({
       id: event.id,
@@ -45,6 +62,10 @@ router.get(
       cols: event.cols,
       organizer: event.organizer,
       seats,
+      myHolds,
+      holdMinutes: config.holdMinutes,
+      maxHolds: config.maxHoldsPerEvent,
+      serverTime: now,
     });
   })
 );
