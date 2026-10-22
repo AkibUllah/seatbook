@@ -6689,3 +6689,703 @@ All the work was done in one Claude Code session (VS Code extension), exported i
 EOF
 grep -c "[redacted]" ai-transcripts/*.md; ls -la ai-transcripts; git add ai-transcripts && git commit -q -m "Add AI transcript of the Claude Code session" && git log --oneline | head -1
 ```
+
+<details><summary>Result</summary>
+
+```
+wrote ai-transcripts/claude-code-session.md: 354 blocks
+ai-transcripts/README.md:0
+ai-transcripts/claude-code-session.md:0
+total 256
+drwxrwxr-x 2 akib akib   4096 Oct 23 00:37 .
+drwxrwxr-x 6 akib akib   4096 Oct 23 00:37 ..
+-rw-rw-r-- 1 akib akib 249257 Oct 23 00:37 claude-code-session.md
+-rw-rw-r-- 1 akib akib    797 Oct 23 00:37 README.md
+22a1039 Add AI transcript of the Claude Code session
+```
+
+</details>
+
+**🔧 Bash**
+
+*Create public GitHub repo and push*
+
+```bash
+grep -cE "gho_[A-Za-z0-9]{10}" ai-transcripts/claude-code-session.md; git branch --show-current && gh repo create AkibUllah/seatbook --public --description "Seatbook take-home: production hardening and 10-minute seat holds" --source . --remote origin --push 2>&1 | tail -4 && git remote -v && gh repo view AkibUllah/seatbook --json url,visibility --jq '.url + " " + .visibility'
+```
+
+<details><summary>Result</summary>
+
+```
+0
+main
+https://github.com/AkibUllah/seatbook
+To https://github.com/AkibUllah/seatbook.git
+ * [new branch]      HEAD -> main
+Branch 'main' set up to track remote branch 'main' from 'origin'.
+origin	https://github.com/AkibUllah/seatbook.git (fetch)
+origin	https://github.com/AkibUllah/seatbook.git (push)
+template	https://github.com/devmonks-co/seatbook.git (fetch)
+template	https://github.com/devmonks-co/seatbook.git (push)
+https://github.com/AkibUllah/seatbook PUBLIC
+```
+
+</details>
+
+**🔧 Bash**
+
+*Verify pushed history and commit authors*
+
+```bash
+git log origin/main --format='%h %an <%ae> %s' | head -20 && git log origin/main --format='%B' | grep -ciE "claude|co-authored|generated with"
+```
+
+<details><summary>Result</summary>
+
+```
+22a1039 akib <jaforakib@gmail.com> Add AI transcript of the Claude Code session
+db2db73 akib <jaforakib@gmail.com> Fix review findings: stale seat map, toast timing, deleted accounts
+a8cb603 akib <jaforakib@gmail.com> README: handover notes, holds API, config and tests
+306d12f akib <jaforakib@gmail.com> Keep holds working when a popular event opens
+18c71b3 akib <jaforakib@gmail.com> Seed: evening events at 6:30pm Dhaka time, never seed in production
+da4ed6f akib <jaforakib@gmail.com> Client: hold seats with a live countdown
+540d15d akib <jaforakib@gmail.com> Client: one API helper, organizer signup, honest bookings page
+7deb734 akib <jaforakib@gmail.com> Add integration tests for bookings, holds and the API
+4358af6 akib <jaforakib@gmail.com> Add 10-minute seat holds
+2334bef akib <jaforakib@gmail.com> Make double booking impossible at the database level
+ed14312 akib <jaforakib@gmail.com> Only let attendees cancel their own bookings, fix seats-left count
+8a67ccf akib <jaforakib@gmail.com> Stop the API from crashing and validate input
+9a56b57 akib <jaforakib@gmail.com> Make the db healthcheck survive a slow first boot
+6421e64 adar2378 <saiful@apexive.com> Initial commit
+1
+```
+
+</details>
+
+## 🤖 Claude
+
+Your repo is live and public at **https://github.com/AkibUllah/seatbook**.
+
+**What's in it:**
+- **14 commits on top of their "Initial commit"**, each explaining what was wrong and why it changed. They're all under your name (`jaforakib@gmail.com`), with no Claude co-author lines.
+- **Fixes:**
+  - double booking, which is now blocked by the database itself
+  - anyone could cancel anyone's booking
+  - organizer logins could be forged
+  - one empty request crashed the server
+  - wrong seat count
+  - a clean start failed on a slow machine
+  - a fake 5% service fee shown to customers
+  - evening talks showing at 12:30 AM
+- **10-minute seat holds** with a live countdown that uses the server's clock, a 4-seat limit per person per event, and automatic return to sale when time runs out.
+- **Tests:** 36 integration tests against a real Postgres and 3 unit tests. I checked the race tests fail when the protection is removed.
+- **README handover note** with all five sections the brief asks for, plus the assumptions.
+- **`ai-transcripts/`** with this whole conversation, with your personal email redacted.
+
+**How it was checked:**
+- From a completely clean start, all tests passed.
+- A two-user browser run covered hold, block, confirm, expiry, the hold limit and release.
+- A 500-person load test now gives exactly 24 holds for 24 seats with no errors. Its first run found a real problem: 178 requests failed with server errors before the fix.
+- An independent review found nothing serious; I fixed its three small findings.
+
+**What you need to do:**
+1. **Submit** `https://github.com/AkibUllah/seatbook` through the Google Form before 30 October, end of day Bangladesh time.
+2. **Re-export the transcript just before you submit**, so it includes these last messages too. In the `seatbook` folder, run this, then commit and push:
+   ```
+   python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py ~/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md
+   ```
+   That script sits in a temporary folder that may get cleared. If it's gone, ask me to export again.
+3. **Study [seatbook-interview-guide.md](../seatbook-interview-guide.md)** until you can explain it without looking. The interview starts with 10 minutes of walking through the code without AI, so this is what gets you the job. The parts that matter most are how a hold works (`claimSeat`, `confirmHold`) and why the database index, not the code, stops double booking.
+4. **Read the README handover note yourself.** It's written in your voice, so change anything you wouldn't say.
+
+On GitHub the commits may show without your profile picture if `jaforakib@gmail.com` isn't added to your account. You can add it under GitHub Settings → Emails.
+
+## 🧑 User
+
+check eveything again go deep and check did we do eveything currect what they want and is eveything work the way they want please
+
+## 🤖 Claude
+
+I'll go through it properly against the brief, point by point, and actually run things rather than relying on what I said earlier. Two checks matter most:
+
+1. **The README's "weakest part" claims Prisma might drop the index in a future migration, but the reviewer reported the opposite.** If my claim is wrong, the README is wrong, and that has to be fixed.
+2. **A truly clean start from a fresh `git clone` of GitHub**, not my working folder, which has extra files lying around.
+
+Starting with the Prisma question:
+
+**🔧 Bash**
+
+*Check whether Prisma would drop the partial index*
+
+```bash
+docker exec seatbook-db-1 psql -U seatbook -tAc "DROP DATABASE IF EXISTS seatbook_shadow" >/dev/null; docker compose exec -T server sh -c 'npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url postgresql://seatbook:seatbook@db:5432/seatbook_shadow --script' 2>&1 | grep -v "^prisma:warn\|update available\|npm i\|^\s*│\|^\s*└\|^\s*┌" | tail -15
+```
+
+<details><summary>Result</summary>
+
+```
+NOTICE:  database "seatbook_shadow" does not exist, skipping
+Error: P1003
+
+Database `seatbook_shadow` does not exist on the database server at `db:5432`.
+```
+
+</details>
+
+**🔧 Bash**
+
+*Diff migrations against schema via shadow DB*
+
+```bash
+docker exec seatbook-db-1 psql -U seatbook -tAc "CREATE DATABASE seatbook_shadow" && docker compose exec -T server sh -c 'npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url postgresql://seatbook:seatbook@db:5432/seatbook_shadow --script' 2>&1 | grep -v "^prisma:warn" | tail -15; echo "=== exit above"
+```
+
+<details><summary>Result</summary>
+
+```
+CREATE DATABASE
+-- This is an empty migration.
+
+=== exit above
+```
+
+</details>
+
+**🔧 Bash**
+
+*Simulate a future migration and inspect SQL*
+
+```bash
+docker exec seatbook-db-1 psql -U seatbook -tAc "DROP DATABASE seatbook_shadow" >/dev/null; docker exec seatbook-db-1 psql -U seatbook -tAc "CREATE DATABASE seatbook_shadow" >/dev/null; docker compose exec -T server sh -c 'sed "s/  cancelledAt DateTime?/  cancelledAt DateTime?\n  note        String?/" prisma/schema.prisma > /tmp/changed.prisma && npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel /tmp/changed.prisma --shadow-database-url postgresql://seatbook:seatbook@db:5432/seatbook_shadow --script' 2>&1 | grep -v "^prisma:warn"; docker exec seatbook-db-1 psql -U seatbook -tAc "DROP DATABASE seatbook_shadow" >/dev/null
+```
+
+<details><summary>Result</summary>
+
+```
+-- AlterTable
+ALTER TABLE "Booking" ADD COLUMN     "note" TEXT;
+```
+
+</details>
+
+**🔧 Bash**
+
+*Fresh clone from GitHub and clean start*
+
+```bash
+docker compose down -v >/dev/null 2>&1; F=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/fresh; rm -rf $F && git clone -q https://github.com/AkibUllah/seatbook.git $F && cd $F && git log --oneline | wc -l && ls -A && time (docker compose up --build -d 2>&1 | tail -2) && for i in $(seq 1 120); do curl -sf localhost:4000/health >/dev/null && echo "API healthy" && break; sleep 5; done; curl -s -o /dev/null -w "client %{http_code}\n" localhost:5173; docker compose ps --format '{{.Name}}: {{.Status}}'
+```
+
+<details><summary>Result</summary>
+
+```
+14
+ai-transcripts
+client
+docker-compose.yml
+.git
+.gitignore
+README.md
+server
+ Container fresh-client-1  Starting
+ Container fresh-client-1  Started
+
+real	0m49.526s
+user	0m0.488s
+sys	0m0.319s
+API healthy
+client 200
+fresh-client-1: Up 16 seconds
+fresh-db-1: Up 30 seconds (healthy)
+fresh-server-1: Up 18 seconds
+Shell cwd was reset to /home/akib/Desktop/dev_monks
+```
+
+</details>
+
+**🔧 Bash**
+
+*Acceptance-test every brief requirement via API*
+
+```bash
+API=localhost:4000; j() { python3 -c "import sys,json;d=json.load(sys.stdin);print($1)"; }
+login() { curl -s $API/auth/login -H 'content-type: application/json' -d "{\"email\":\"$1\",\"password\":\"password123\"}"; }
+echo "### Must keep working: sign up and log in, as organizer or attendee"
+for r in ORGANIZER ATTENDEE; do curl -s $API/auth/register -H 'content-type: application/json' -d "{\"email\":\"new$r@x.com\",\"password\":\"password123\",\"name\":\"N\",\"role\":\"$r\"}" | j "'signup', d['user']['role']"; done
+for u in organizer alice bob; do login $u@seatbook.test | j "'login', d['user']['email'], d['user']['role']"; done
+O=$(login organizer@seatbook.test | j "d['token']"); A=$(login alice@seatbook.test | j "d['token']"); B=$(login bob@seatbook.test | j "d['token']")
+echo "### Must keep working: organizer creates event with seat grid and price"
+E=$(curl -s $API/events -H "authorization: Bearer $O" -H 'content-type: application/json' -d "{\"title\":\"Acceptance\",\"venue\":\"Hall\",\"startsAt\":\"$(date -u -d '+3 days' +%FT%TZ)\",\"rows\":3,\"cols\":4,\"priceCents\":2500}" | j "d['id']"); echo "event $E"
+curl -s $API/events/$E | j "'seats', len(d['seats']), 'price', d['price'], d['seats'][0]['label'], d['seats'][-1]['label']"
+echo "### Must keep working: browse, pick a free seat, book it"
+curl -s $API/events | j "[(e['title'], e['seatsLeft'], e['totalSeats']) for e in d]"
+S1=$(curl -s $API/events/$E | j "d['seats'][0]['id']"); S2=$(curl -s $API/events/$E | j "d['seats'][1]['id']"); S3=$(curl -s $API/events/$E | j "d['seats'][2]['id']")
+curl -s -w " [%{http_code}]\n" $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d "{\"seatId\":$S1}" | cut -c1-90
+echo "### Must keep working: see and cancel bookings"
+BK=$(curl -s $API/bookings/mine -H "authorization: Bearer $A" | j "[b for b in d if b['event']['title']=='Acceptance'][0]['id']"); curl -s $API/bookings/mine -H "authorization: Bearer $A" | j "[(b['event']['title'], b['seat'], b['status']) for b in d]"
+curl -s -w " [%{http_code}]\n" -X POST $API/bookings/$BK/cancel -H "authorization: Bearer $A"
+echo "### Holds: hold, nobody else can take it"
+H=$(curl -s $API/holds -H "authorization: Bearer $A" -H 'content-type: application/json' -d "{\"seatId\":$S2}" | tee /dev/stderr | j "d['id']") 2>&1
+curl -s -w " [%{http_code}]\n" $API/holds -H "authorization: Bearer $B" -H 'content-type: application/json' -d "{\"seatId\":$S2}"
+curl -s -w " [%{http_code}]\n" $API/bookings -H "authorizati
+… [1135 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+{"id":6,"seatId":81,"label":"A2","expiresAt":"2026-10-22T18:55:00.819Z","serverTime":"2026-10-22T18:45:00.882Z"}{"error":"Sorry, this seat is taken"} [409]
+{"error":"Sorry, this seat is taken"} [409]
+### Holds: show how long they have left
+myHolds [{'id': 6, 'seatId': 81, 'label': 'A2', 'expiresAt': '2026-10-22T18:55:00.819Z'}] serverTime 2026-10-22T18:45:00.934Z
+### Holds: confirm in time -> theirs
+{"id":6,"status":"CONFIRMED","seat":"A2"} [200]
+### Holds: not confirmed -> back on sale
+UPDATE 1
+seat A3 available available True
+{"error":"Your hold expired and the seat went back on sale"} [410]
+{"id":8,"seatId":82,"label":"A3","expiresAt":"2026-10-22T18:55:01.503Z","serverT
+### seat map final
+[('A1', 'available'), ('A2', 'booked'), ('A3', 'held'), ('A4', 'available')]
+```
+
+</details>
+
+## 🤖 Claude
+
+The hold half passes. The output for the first half got swallowed by my `tee` redirect, so I'll rerun that part on its own:
+
+**🔧 Bash**
+
+*Rerun must-keep-working acceptance checks*
+
+```bash
+API=localhost:4000; j() { python3 -c "import sys,json;d=json.load(sys.stdin);print($1)"; }
+login() { curl -s $API/auth/login -H 'content-type: application/json' -d "{\"email\":\"$1\",\"password\":\"password123\"}"; }
+echo "### sign up as organizer / attendee"
+for r in ORGANIZER ATTENDEE; do curl -s $API/auth/register -H 'content-type: application/json' -d "{\"email\":\"second$r@x.com\",\"password\":\"password123\",\"name\":\"N\",\"role\":\"$r\"}" | j "'signup', d['user']['role']"; done
+echo "### log in with README accounts"; for u in organizer alice bob; do login $u@seatbook.test | j "'login', d['user']['email'], d['user']['role']"; done
+O=$(login organizer@seatbook.test | j "d['token']"); A=$(login alice@seatbook.test | j "d['token']")
+echo "### organizer creates event"
+E=$(curl -s $API/events -H "authorization: Bearer $O" -H 'content-type: application/json' -d "{\"title\":\"Acceptance 2\",\"venue\":\"Hall\",\"startsAt\":\"$(date -u -d '+3 days' +%FT%TZ)\",\"rows\":3,\"cols\":4,\"priceCents\":2500}" | j "d['id']"); echo "event id $E"
+curl -s $API/events/$E | j "'seats', len(d['seats']), 'price', d['price'], d['seats'][0]['label'], '..', d['seats'][-1]['label']"
+echo "### browse"; curl -s $API/events | j "[(e['title'], e['seatsLeft'], e['totalSeats']) for e in d]"
+S1=$(curl -s $API/events/$E | j "d['seats'][0]['id']")
+echo "### book a free seat (direct API, still supported)"; curl -s -w " [%{http_code}]\n" $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d "{\"seatId\":$S1}" | cut -c1-100
+echo "### see bookings"; curl -s $API/bookings/mine -H "authorization: Bearer $A" | j "[(b['event']['title'], b['seat'], b['status']) for b in d]"
+BK=$(curl -s $API/bookings/mine -H "authorization: Bearer $A" | j "[b for b in d if b['event']['title']=='Acceptance 2'][0]['id']")
+echo "### cancel"; curl -s -w " [%{http_code}]\n" -X POST $API/bookings/$BK/cancel -H "authorization: Bearer $A"
+curl -s $API/events/$E | j "'A1 after cancel:', d['seats'][0]['status']"
+```
+
+<details><summary>Result</summary>
+
+```
+### sign up as organizer / attendee
+signup ORGANIZER
+signup ATTENDEE
+### log in with README accounts
+login organizer@seatbook.test ORGANIZER
+login alice@seatbook.test ATTENDEE
+login bob@seatbook.test ATTENDEE
+### organizer creates event
+event id 5
+seats 12 price $25.00 A1 .. C4
+### browse
+[('Intro to TypeScript', 0, 15), ('Acceptance', 10, 12), ('Acceptance 2', 12, 12), ('Postgres in Practice', 38, 40), ('Design Systems Workshop', 24, 24)]
+### book a free seat (direct API, still supported)
+{"id":9,"seatId":92,"userId":2,"status":"CONFIRMED","createdAt":"2026-10-22T18:45:13.379Z","cancelle
+### see bookings
+[('Acceptance 2', 'A1', 'CONFIRMED'), ('Acceptance', 'A2', 'CONFIRMED'), ('Acceptance', 'A1', 'CANCELLED'), ('Intro to TypeScript', 'A4', 'CONFIRMED'), ('Postgres in Practice', 'A1', 'CONFIRMED')]
+### cancel
+{"id":9,"status":"CANCELLED"} [200]
+A1 after cancel: available
+```
+
+</details>
+
+**🔧 Bash**
+
+*Find login redirects in client*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook && grep -n "navigate('/login')\|to=\"/login\"\|window.location.href = '/'\|useNavigate\|useLocation" client/src/pages/EventDetailPage.tsx client/src/pages/LoginPage.tsx client/src/pages/MyBookingsPage.tsx client/src/pages/CreateEventPage.tsx client/src/api.ts
+```
+
+<details><summary>Result</summary>
+
+```
+client/src/pages/MyBookingsPage.tsx:59:    return <Navigate to="/login" replace />;
+client/src/pages/EventDetailPage.tsx:2:import { useParams, useNavigate, Link } from 'react-router-dom';
+client/src/pages/EventDetailPage.tsx:67:  const navigate = useNavigate();
+client/src/pages/EventDetailPage.tsx:155:      navigate('/login');
+client/src/pages/EventDetailPage.tsx:361:              <Link to="/login" className="text-[#a855f7] hover:underline">
+client/src/pages/LoginPage.tsx:26:      window.location.href = '/';
+client/src/pages/CreateEventPage.tsx:2:import { Navigate, useNavigate } from 'react-router-dom';
+client/src/pages/CreateEventPage.tsx:7:  const navigate = useNavigate();
+client/src/pages/CreateEventPage.tsx:54:    return <Navigate to="/login" replace />;
+```
+
+</details>
+
+## 🤖 Claude
+
+I'll use a `?next=` parameter, and only accept same-site paths, so the login page can't be abused as an open redirect to another website.
+
+**🔧 Bash**
+
+*Return users to their page after login*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook/client && python3 - <<'EOF'
+def edit(p, pairs):
+    s=open(p).read()
+    for a,b in pairs:
+        assert a in s, (p, a[:60]); s=s.replace(a,b)
+    open(p,'w').write(s)
+
+edit('src/pages/LoginPage.tsx', [
+("import { useState, FormEvent } from 'react';\n", "import { useState, FormEvent } from 'react';\nimport { useSearchParams } from 'react-router-dom';\n"),
+("export default function LoginPage() {\n", "export default function LoginPage() {\n  const [params] = useSearchParams();\n  // only same-site paths, so the login page can't be used to bounce people to another site\n  const next = params.get('next');\n  const returnTo = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';\n"),
+("      window.location.href = '/';", "      window.location.href = returnTo;"),
+])
+edit('src/pages/EventDetailPage.tsx', [
+("      navigate('/login');", "      navigate(`/login?next=/events/${id}`);"),
+('              <Link to="/login" className="text-[#a855f7] hover:underline">', '              <Link to={`/login?next=/events/${id}`} className="text-[#a855f7] hover:underline">'),
+])
+edit('src/pages/MyBookingsPage.tsx', [('    return <Navigate to="/login" replace />;', '    return <Navigate to="/login?next=/my-bookings" replace />;')])
+edit('src/pages/CreateEventPage.tsx', [('    return <Navigate to="/login" replace />;', '    return <Navigate to="/login?next=/events/new" replace />;')])
+EOF
+cd .. && docker compose -p fresh ps >/dev/null 2>&1; docker run --rm -v "$PWD/client":/app -w /app node:20-alpine sh -c "npm ci --silent >/dev/null 2>&1; npx tsc --noEmit && echo CLIENT TYPECHECK OK" 2>&1 | grep -v "npm notice"
+```
+
+<details><summary>Result</summary>
+
+```
+CLIENT TYPECHECK OK
+```
+
+</details>
+
+## 🤖 Claude
+
+That `npm ci` ran as root inside Docker and left a root-owned `client/node_modules`. It's gitignored, but I'll fix the ownership so it doesn't trip you up later. Then I'll correct the README.
+
+**🔧 Bash**
+
+*Fix ownership and locate README claims*
+
+```bash
+docker run --rm -v "$PWD/client":/app node:20-alpine chown -R $(id -u):$(id -g) /app/node_modules && ls -ld client/node_modules && git status --short && grep -n "drop\|Weakest\|weakest" README.md
+```
+
+<details><summary>Result</summary>
+
+```
+drwxr-xr-x 106 akib akib 4096 Oct 23 00:45 client/node_modules
+ M client/src/pages/CreateEventPage.tsx
+ M client/src/pages/EventDetailPage.tsx
+ M client/src/pages/LoginPage.tsx
+ M client/src/pages/MyBookingsPage.tsx
+24:**After changing `schema.prisma`:** create the migration from your machine (`cd server && npx prisma migrate dev`, with `DATABASE_URL` pointing at `localhost:5433`), then `docker compose restart server`. **Check the generated SQL does not drop `Booking_one_active_per_seat`**: it is a partial unique index that Prisma can't express in the schema, it only exists in the migrations, and it is what prevents double booking. The integration tests fail if it goes missing.
+151:### Weakest part of my work
+153:**Everything rests on one database index that Prisma doesn't know about.** The rule "one active booking per seat" is a partial unique index. Prisma's schema file can't express it, so it only exists in the migration SQL. If someone later generates a migration without reading it, Prisma may add a line that drops the index, and double booking would silently come back. I've put a note in `schema.prisma` and this README, and the integration tests fail if the index is missing (I checked by dropping it: 5 of 20 simultaneous requests got the same seat). Still, it relies on people running the tests.
+```
+
+</details>
+
+**🔧 Bash**
+
+*Correct README index-dropping claim*
+
+```bash
+python3 - <<'EOF'
+p='README.md'; s=open(p).read()
+def rep(a,b):
+    global s
+    assert a in s, a[:60]; s=s.replace(a,b)
+rep("**Check the generated SQL does not drop `Booking_one_active_per_seat`**: it is a partial unique index that Prisma can't express in the schema, it only exists in the migrations, and it is what prevents double booking. The integration tests fail if it goes missing.",
+"**Know about `Booking_one_active_per_seat`**: it is a partial unique index that Prisma can't express in the schema, so it only exists in the migrations, and it is what prevents double booking. Prisma 5 leaves it alone when generating migrations (checked), and the integration tests fail if it ever goes missing.")
+rep("**Everything rests on one database index that Prisma doesn't know about.** The rule \"one active booking per seat\" is a partial unique index. Prisma's schema file can't express it, so it only exists in the migration SQL. If someone later generates a migration without reading it, Prisma may add a line that drops the index, and double booking would silently come back. I've put a note in `schema.prisma` and this README, and the integration tests fail if the index is missing (I checked by dropping it: 5 of 20 simultaneous requests got the same seat). Still, it relies on people running the tests.",
+"**Everything rests on one database index that the schema file doesn't show.** The rule \"one active booking per seat\" is a partial unique index. Prisma's schema file can't express it, so it lives only in the migration SQL. A developer reading `schema.prisma` to understand the data can't see the most important rule in it. I checked that Prisma 5.22 doesn't try to drop the index when generating new migrations, but that's tool behaviour I'm relying on, not something the schema guarantees: a future Prisma upgrade, or someone squashing or rewriting the migrations, could lose it, and double booking would silently come back. I've put a note in `schema.prisma` and this README, and the integration tests fail if the index is missing (I checked by dropping it: 5 of 20 simultaneous requests got the same seat). Still, it relies on people running the tests.")
+open(p,'w').write(s)
+EOF
+grep -n "Weakest part\|Know about" README.md | cut -c1-80; grep -n "weakest" -i ../seatbook-interview-guide.md
+```
+
+<details><summary>Result</summary>
+
+```
+24:**After changing `schema.prisma`:** create the migration from your machine (`
+151:### Weakest part of my work
+46:- **Weakest part:** the index lives outside `schema.prisma`; a future `prisma migrate dev` could drop it. The tests catch that.
+```
+
+</details>
+
+**🔧 Bash**
+
+*Align interview guide with corrected claim*
+
+```bash
+python3 - <<'EOF'
+p='../seatbook-interview-guide.md'; s=open(p).read()
+a="- **Weakest part:** the index lives outside `schema.prisma`; a future `prisma migrate dev` could drop it. The tests catch that."
+b="- **Weakest part:** the index lives outside `schema.prisma`, so nobody reading the schema sees the most important rule. I checked that Prisma 5.22 doesn't drop it when generating migrations, but a Prisma upgrade or someone rewriting migrations could. The tests catch that."
+assert a in s; s=s.replace(a,b); open(p,'w').write(s)
+EOF
+grep -n "README\|35\|36" ../seatbook-interview-guide.md | head; grep -n "35 \|36 " README.md
+```
+
+<details><summary>Result</summary>
+
+```
+13:Open the README table. For each bug, say **what happened** and **why**:
+42:- 36 integration tests on a **real Postgres** (a mock can't show a race). **I removed the index and the race tests failed**: that proves the tests test the right thing.
+116:docker compose exec server npm run test:integration       # 36 API tests
+103:| **Cancelled seats never came back on the events list.** | "36 seats left" when 38 were free. | Only active bookings count. |
+159:I used Claude Code throughout (transcripts in `ai-transcripts/`). The clearest case where it was wrong: **it recommended switching prices to Bangladeshi taka**, reasoning that the business is in Dhaka. I asked why, and whether the brief mentioned taka anywhere. It didn't, and the existing unit test explicitly expects dollars (`formatPrice(1500)` → `$15.00`). Swapping only the symbol would also have turned a $40 workshop into ৳40, about 35 US cents. Changing currency would have been an unrequested product change based on a guess. So prices stay in dollars, and the currency question is on the list above for you to decide.
+166:- **36 integration tests against a real Postgres**, covering: concurrent booking and holding (20 at once, exactly one wins); the 4-hold limit under 10 parallel requests; holds expiring (can't confirm, back on sale without waiting for the cleanup job, no longer counting toward the limit); confirm/release/cancel only by the owner; repeat confirms; validation; old forged logins rejected; empty login returning
+… [112 more characters omitted]
+```
+
+</details>
+
+## 🤖 Claude
+
+I'll also add this to the README's list of AI mistakes. Overstating the Prisma risk was my error, it was caught by the second review, and the transcript shows both.
+
+**🔧 Bash**
+
+*Record the overstated-risk mistake in README*
+
+```bash
+python3 - <<'EOF'
+p='README.md'; s=open(p).read()
+a="And it initially trusted the `X-Forwarded-For` header unconditionally, which would let anyone bypass the login rate limit."
+b=a+" It also overstated a risk in the first draft of this note, claiming Prisma would try to drop the partial index in future migrations. A second review pass questioned that, and checking showed Prisma 5.22 leaves the index alone, so the weakest-part section below the table was corrected."
+assert a in s; s=s.replace(a,b)
+open(p,'w').write(s)
+EOF
+grep -c "overstated" README.md
+```
+
+<details><summary>Result</summary>
+
+```
+1
+```
+
+</details>
+
+**🔧 Bash**
+
+*Commit login redirect and README correction*
+
+```bash
+sed -i 's/so the weakest-part section below the table was corrected\./so the weakest-part section above was corrected./' README.md && grep -c "section above was corrected" README.md && git add client && git commit -q -m "Send people back to the event after they log in
+
+Picking a seat while logged out went to the login page and then to the
+home page, so the attendee had to find the event again. Login now
+returns to ?next=, accepting only same-site paths so the page can't be
+used to redirect to another site." && git add README.md && git commit -q -m "README: correct the claim about Prisma dropping the partial index
+
+Checked with prisma migrate diff: Prisma 5.22 generates an empty diff
+for the current schema, and only ADD COLUMN for a schema change, so it
+does not try to drop Booking_one_active_per_seat. The risk is that the
+rule is invisible in schema.prisma and depends on tool behaviour, not
+that the next migration will remove it." && git log --oneline | head -3
+```
+
+<details><summary>Result</summary>
+
+```
+1
+9410f4d README: correct the claim about Prisma dropping the partial index
+e89fc15 Send people back to the event after they log in
+22a1039 Add AI transcript of the Claude Code session
+```
+
+</details>
+
+## 🤖 Claude
+
+Next I'll switch from the fresh-clone stack back to the working copy and test the new login redirect in a browser, including the open-redirect guard.
+
+**🔧 Bash**
+
+*Browser-test login return and open-redirect guard*
+
+```bash
+F=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/fresh; (cd $F && docker compose down -v >/dev/null 2>&1); cd /home/akib/Desktop/dev_monks/seatbook && docker compose up --build -d 2>&1 | tail -1; for i in $(seq 1 120); do curl -sf localhost:4000/health >/dev/null && echo "API healthy" && break; sleep 5; done
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; cat > $S/redirect.mjs <<'EOF'
+import puppeteer from 'puppeteer-core';
+const APP = 'http://localhost:5173';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'], defaultViewport: { width: 1400, height: 1000 } });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function loginVia(page) {
+  await page.waitForSelector('input[aria-label="Email address"]');
+  await page.type('input[aria-label="Email address"]', 'bob@seatbook.test');
+  await page.type('input[aria-label="Password"]', 'password123');
+  await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
+}
+// 1. logged-out visitor picks a seat
+let ctx = await browser.createBrowserContext(); let p = await ctx.newPage();
+await p.goto(`${APP}/events/2`); await p.waitForSelector('button[aria-label^="Seat B2,"]'); await sleep(1000);
+await (await p.$('button[aria-label^="Seat B2,"]')).click();
+await p.waitForFunction(() => location.pathname === '/login');
+console.log('after seat click:', new URL(p.url()).pathname + new URL(p.url()).search);
+await loginVia(p);
+console.log('after login:', new URL(p.url()).pathname);
+await ctx.close();
+// 2. My Bookings while logged out
+ctx = await browser.createBrowserContext(); p = await ctx.newPage();
+await p.goto(`${APP}/my-bookings`); await loginVia(p);
+console.log('my-bookings round trip:', new URL(p.url()).pathname);
+await ctx.close();
+// 3. open redirect attempt
+ctx = await browser.createBrowserContext(); p = await ctx.newPage();
+await p.goto(`${APP}/login?next=//evil.example.com/x`); await loginVia(p);
+console.log('next=//evil lands on:', p.url());
+await ctx.close();
+await browser.close();
+EOF
+node $S/redirect.mjs 2>&1 | grep -v "^\s*at " | tail -6
+```
+
+<details><summary>Result</summary>
+
+```
+Container seatbook-client-1  Started
+API healthy
+after seat click: /login?next=/events/2
+after login: /events/2
+my-bookings round trip: /my-bookings
+next=//evil lands on: http://localhost:5173/
+```
+
+</details>
+
+**🔧 Bash**
+
+*Run all tests, client build, browser run*
+
+```bash
+docker compose exec -T server npm test 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep "Tests "; docker compose exec -T server npm run test:integration 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E "Tests |FAIL"; docker compose exec -T client npm run build 2>&1 | tail -2; S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; node $S/run.mjs $S/shots 2>&1 | grep -E "^==|toast:|Seat .*disabled|nav:|Active" | head -24
+```
+
+<details><summary>Result</summary>
+
+```
+Tests  3 passed (3)
+      Tests  36 passed (36)
+dist/assets/index-BLRViXMp.js   193.37 kB │ gzip: 60.76 kB
+✓ built in 2.94s
+== 1. Alice holds C3
+Seat C3, held by you disabled=false
+== 2. Bob sees C3 held and cannot take it
+Seat C3, held disabled=true
+== 3. Alice confirms
+toast: 🎉 Booked! Seat C3 is yours.
+Seat C3, booked by you disabled=true
+== 4. Hold expires while the page is open
+toast: Your hold ran out and the seat went back on sale
+Seat D1, available disabled=false
+== 5. Bob takes D1 right after
+Seat D1, held by you disabled=false
+== 6. Hold limit
+toast: You can hold up to 4 seats at a time for an event
+== 7. Release by clicking own held seat
+Seat E1, available disabled=false
+== 8. My Bookings
+My Bookings 🎟️ | All your amazing experiences in one place ✨ | Active Bookings | 3 | Upcoming | 2 | Total Spent | $30.00 | 🎭 | Postgres in Practice | 📍 Banani Hall, Room 2 · 📅 Oct 29, 2026, 6:30 PM | 💺 C3 | $15.00 | ✓ Confirmed | Cancel | 🎭 | Intro to TypeScript | 📍 Banani Hall, Room 1 · 📅 Oct 12, 2026, 6:30 PM | 💺 A4 | $0.00 | Past | 🎭 | Postgres in Practice | 📍 Banani Hall, Room 2 · 📅 Oct 29, 2026, 6:30 PM | 💺 A1 | $15.00 | ✓ Confirmed | Cancel
+== 9. Organizer signup from the UI
+nav: ✨ Seatbook | 🎉 Events | ➕ Create Event | N | Logout
+== 10. Organizer creates an event
+```
+
+</details>
+
+**🔧 Bash**
+
+*Browser-test cancel, past event, events list*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/e2e; cat > $S/cancel.mjs <<'EOF'
+import puppeteer from 'puppeteer-core';
+const APP = 'http://localhost:5173';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'], defaultViewport: { width: 1400, height: 1000 } });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const p = await browser.newPage();
+p.on('dialog', (d) => { console.log('dialog:', d.message()); d.accept(); });
+await p.goto(`${APP}/login`);
+await p.type('input[aria-label="Email address"]', 'alice@seatbook.test');
+await p.type('input[aria-label="Password"]', 'password123');
+await Promise.all([p.waitForNavigation(), p.click('button[type=submit]')]);
+await p.goto(`${APP}/my-bookings`);
+await p.waitForFunction(() => document.body.innerText.includes('Total Spent'));
+await sleep(800);
+const stat = () => p.$eval('main', (m) => m.innerText.match(/Active Bookings\n(\d+)\nUpcoming\n(\d+)\nTotal Spent\n(\S+)/)?.slice(1).join(' / '));
+console.log('before: active/upcoming/spent =', await stat(), '| cancel buttons:', (await p.$$('button::-p-text(Cancel)')).length);
+await (await p.$('button::-p-text(Cancel)')).click();
+await p.waitForFunction(() => document.querySelector('[role=status], .fixed')?.innerText.includes('cancelled'));
+await sleep(800);
+console.log('toast:', await p.$eval('.fixed', (t) => t.innerText));
+console.log('after:  active/upcoming/spent =', await stat(), '| cancel buttons:', (await p.$$('button::-p-text(Cancel)')).length, '| cancelled rows:', (await p.$$('span::-p-text(Cancelled)')).length);
+await p.screenshot({ path: `${process.argv[2]}/11-after-cancel.png`, fullPage: true });
+await p.goto(`${APP}/events/3`);
+await p.waitForSelector('button[aria-label^="Seat A1,"]');
+await sleep(500);
+const disabled = await p.$$eval('button[aria-label^="Seat "]', (bs) => bs.filter((b) => b.disabled).length + '/' + bs.length);
+console.log('past event: badge', await p.$eval('h1', (h) => h.previousElementSibling.innerText), '| seats disabled', disabled, '|', await p.$eval('h2 + p', (x) => x.innerText));
+await p.goto(`${APP}/`);
+await p.waitForFunction(() => document.body.innerText.includes('seats left'));
+console.log('events list:', (await p.$$eval('a[href^="/events/"] h3', (hs) => hs.map((h) => h.innerText + ': ' + h.parentElement.innerText.match(/(\d+) seats left/)[1]))).join(' | '));
+await browser.close();
+EOF
+node $S/cancel.mjs $S
+… [41 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+before: active/upcoming/spent = 3 / 2 / $30.00 | cancel buttons: 2
+dialog: Are you sure you want to cancel? 😢
+toast: Booking cancelled ✅
+after:  active/upcoming/spent = 2 / 1 / $15.00 | cancel buttons: 1 | cancelled rows: 1
+past event: badge ⏰ ENDED | seats disabled 15/15 | This event has already started.
+events list: Intro to TypeScript: 0 | Postgres in Practice: 35 | Design Systems Workshop: 24
+```
+
+</details>
+
+**🔧 Bash**
+
+*Push fixes and verify GitHub state*
+
+```bash
+git push -q origin main 2>&1 | tail -2; git status -sb | head -1; gh api repos/AkibUllah/seatbook/commits --jq 'length' && gh api repos/AkibUllah/seatbook/contents/ --jq '.[].name' | tr '\n' ' '
+```
+
+<details><summary>Result</summary>
+
+```
+## main...origin/main
+16
+.gitignore README.md ai-transcripts client docker-compose.yml server
+```
+
+</details>
+
+## 🤖 Claude
+
+GitHub has all 16 commits. One last step: re-export the transcript so `ai-transcripts/` includes this audit too.
+
+**🔧 Bash**
+
+*Re-export transcript, commit and push*
+
+```bash
+python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c "[redacted]" ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git log --oneline | head -1 && git status -sb | head -1
+```
