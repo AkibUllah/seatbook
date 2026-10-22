@@ -50,8 +50,12 @@ export default function CreateEventPage() {
     }
   };
 
-  if (getUser()?.role !== 'ORGANIZER') {
+  const user = getUser();
+  if (!user) {
     return <Navigate to="/login?next=/events/new" replace />;
+  }
+  if (user.role !== 'ORGANIZER') {
+    return <Navigate to="/" replace />;
   }
 
   // the preview is capped like the server (26 x 30) so a typo can't freeze the page
