@@ -14,14 +14,22 @@ function buildSeats(rows: number, cols: number) {
   return seats;
 }
 
+// 6:30pm in Dhaka (UTC+6, no DST). setHours would use the server's zone,
+// which is UTC in Docker, and put the evening talks at 12:30am.
 function daysFromNow(days: number) {
   const d = new Date();
-  d.setDate(d.getDate() + days);
-  d.setHours(18, 30, 0, 0);
+  d.setUTCDate(d.getUTCDate() + days);
+  d.setUTCHours(12, 30, 0, 0);
   return d;
 }
 
 async function main() {
+  // demo accounts share a known password; never create them on a real deployment
+  if (process.env.NODE_ENV === 'production') {
+    console.log('NODE_ENV=production, not seeding demo data');
+    return;
+  }
+
   const existing = await prisma.user.count();
   if (existing > 0) {
     console.log('Database already seeded, skipping');
