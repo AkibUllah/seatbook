@@ -152,7 +152,7 @@ export default function EventDetailPage() {
     if (busySeat !== null || confirming) return;
 
     if (!user) {
-      navigate('/login');
+      navigate(`/login?next=/events/${id}`);
       return;
     }
     if (user.role !== 'ATTENDEE') {
@@ -358,7 +358,7 @@ export default function EventDetailPage() {
           </button>
           {!user && (
             <p className="mt-4 text-center text-sm text-white/50">
-              <Link to="/login" className="text-[#a855f7] hover:underline">
+              <Link to={`/login?next=/events/${id}`} className="text-[#a855f7] hover:underline">
                 Log in
               </Link>{' '}
               to hold seats

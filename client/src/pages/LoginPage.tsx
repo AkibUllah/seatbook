@@ -1,9 +1,14 @@
 import { useState, FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import GradientButton from '../components/GradientButton';
 import { api, errorMessage } from '../api';
 import { saveSession, SessionUser } from '../session';
 
 export default function LoginPage() {
+  const [params] = useSearchParams();
+  // only same-site paths, so the login page can't be used to bounce people to another site
+  const next = params.get('next');
+  const returnTo = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +28,7 @@ export default function LoginPage() {
         body: isLogin ? { email, password } : { email, password, name, role },
       });
       saveSession(data.token, data.user);
-      window.location.href = '/';
+      window.location.href = returnTo;
     } catch (err) {
       setError(errorMessage(err));
       setSubmitting(false);

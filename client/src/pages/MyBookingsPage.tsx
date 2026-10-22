@@ -56,7 +56,7 @@ export default function MyBookingsPage() {
   };
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login?next=/my-bookings" replace />;
   }
   if (user.role !== 'ATTENDEE') {
     return <Navigate to="/" replace />;
