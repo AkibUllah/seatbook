@@ -1,22 +1,26 @@
 import prisma from '../db';
-import { formatPrice, isSeatBookable } from '../utils/helpers';
+import { formatPrice } from '../utils/helpers';
 
 export async function listEvents() {
   const events = await prisma.event.findMany({
     orderBy: { startsAt: 'asc' },
-    include: { seats: { include: { bookings: true } } },
+    include: {
+      _count: { select: { seats: { where: { bookings: { some: { status: 'CONFIRMED' } } } } } },
+    },
   });
 
+  const now = new Date();
   return events.map((event) => {
-    const seatsLeft = event.seats.filter((seat) => isSeatBookable(seat, event)).length;
+    const totalSeats = event.rows * event.cols;
     return {
       id: event.id,
       title: event.title,
       venue: event.venue,
       startsAt: event.startsAt,
       price: formatPrice(event.priceCents),
-      totalSeats: event.seats.length,
-      seatsLeft,
+      priceCents: event.priceCents,
+      totalSeats,
+      seatsLeft: event.startsAt < now ? 0 : totalSeats - event._count.seats,
     };
   });
 }
