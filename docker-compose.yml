@@ -26,6 +26,8 @@ services:
       # local development only; production must supply its own long random secret
       JWT_SECRET: local-dev-only-secret-change-me
       CORS_ORIGIN: http://localhost:5173
+      # used only by npm run test:integration
+      TEST_DATABASE_URL: postgresql://seatbook:seatbook@db:5432/seatbook_test
     ports:
       - "4000:4000"
     depends_on:
@@ -34,6 +36,7 @@ services:
     volumes:
       - ./server/src:/app/src
       - ./server/prisma:/app/prisma
+      - ./server/test:/app/test
 
   client:
     build: ./client
