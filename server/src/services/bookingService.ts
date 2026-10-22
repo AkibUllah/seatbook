@@ -28,7 +28,11 @@ export async function claimSeat(userId: number, seatId: number, status: 'HELD' |
   try {
     return await prisma.$transaction(async (tx) => {
       // Serialise one user's claims so parallel requests can't slip past the hold limit.
-      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      const locked = await tx.$queryRaw<{ id: number }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      if (locked.length === 0) {
+        // a valid token for an account that no longer exists
+        throw new HttpError(401, 'Please log in again');
+      }
 
       const seat = await tx.seat.findUnique({ where: { id: seatId }, include: { event: true } });
       if (!seat) {

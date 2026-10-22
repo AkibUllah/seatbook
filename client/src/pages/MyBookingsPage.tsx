@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { api, errorMessage } from '../api';
 import { getUser } from '../session';
@@ -33,9 +33,12 @@ export default function MyBookingsPage() {
     if (user?.role === 'ATTENDEE') loadBookings();
   }, []);
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+
   const showToast = (type: 'success' | 'error', message: string) => {
+    clearTimeout(toastTimer.current);
     setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
   };
 
   const cancelBooking = async (id: number) => {

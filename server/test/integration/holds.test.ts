@@ -56,6 +56,14 @@ describe('holding a seat', () => {
     expect(results.filter((r) => r.status === 409)).toHaveLength(6);
   });
 
+  it('sends a token for a deleted account back to login', async () => {
+    const event = await createEvent();
+    const ghost = await createUser();
+    await prisma.user.delete({ where: { id: ghost.id } });
+
+    expect((await hold(ghost, event.seats[0].id)).status).toBe(401);
+  });
+
   it('shows the seat as held to others without saying by whom', async () => {
     const event = await createEvent();
     const alice = await createUser();

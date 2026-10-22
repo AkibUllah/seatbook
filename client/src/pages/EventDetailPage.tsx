@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, ApiError, errorMessage } from '../api';
 import { getUser } from '../session';
@@ -75,19 +75,27 @@ export default function EventDetailPage() {
   const [clockOffset, setClockOffset] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  // polls and post-action refreshes overlap; only the newest response may update the page
+  const latestFetch = useRef(0);
+
   const showToast = useCallback((type: 'success' | 'error', message: string) => {
+    clearTimeout(toastTimer.current);
     setToast({ type, message });
-    setTimeout(() => setToast(null), 4000);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
   const fetchEvent = useCallback(async () => {
+    const fetchId = ++latestFetch.current;
     try {
       const data = await api<EventDetail>(`/events/${id}`);
+      if (fetchId !== latestFetch.current) return;
       setClockOffset(new Date(data.serverTime).getTime() - Date.now());
       setNow(Date.now());
       setEvent(data);
       setLoadError('');
     } catch (err) {
+      if (fetchId !== latestFetch.current) return;
       setLoadError(err instanceof ApiError && err.status === 404 ? 'Event not found' : errorMessage(err));
     }
   }, [id]);
