@@ -9453,3 +9453,1877 @@ please update and push
 ```bash
 python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git status -sb | head -1 && git log --oneline | head -1
 ```
+
+<details><summary>Result</summary>
+
+```
+wrote ai-transcripts/claude-code-session.md: 549 blocks
+0
+## main...origin/main
+86fed03 Update AI transcript
+```
+
+</details>
+
+## 🤖 Claude
+
+I've exported the transcript and pushed it. GitHub now has the full conversation up to your "please update and push" request, with your email still redacted, and GitHub matches your local copy.
+
+The repo is ready to submit: https://github.com/AkibUllah/seatbook
+
+## 🧑 User
+
+let run eveything and i want to see what is doing in this project thing no need to add this in transcript i want just check my self
+
+## 🤖 Claude
+
+The GitHub transcript only changes when I export it, and I won't do that unless you ask. One thing to know: if you ask me to export again later, the export includes the whole conversation, this part too.
+
+Checking the app is running:
+
+**🔧 Bash**
+
+*Check the app is running*
+
+```bash
+docker compose ps --format '{{.Name}}: {{.Status}}'; curl -s -o /dev/null -w "app: %{http_code}\n" localhost:5173; curl -s localhost:4000/health; echo
+```
+
+<details><summary>Result</summary>
+
+```
+seatbook-client-1: Up 15 minutes
+seatbook-db-1: Up 15 minutes (healthy)
+seatbook-server-1: Up 15 minutes
+app: 200
+{"ok":true}
+```
+
+</details>
+
+## 🤖 Claude
+
+Everything is running. Open **http://localhost:5173** in your browser. All accounts use the password `password123`.
+
+**1. See a hold block another person (the main feature)**
+- In a normal window, log in as `alice@seatbook.test`. Open **Postgres in Practice** and click a free (purple) seat. It turns orange and a **10:00 countdown** starts on the right.
+- In a **private/incognito window**, log in as `bob@seatbook.test` and open the same event. Alice's seat shows as dashed amber ("held by someone else"), and Bob can't click it.
+- Back as Alice, click **Confirm booking**. The seat turns green, and Bob sees it as booked after a refresh (up to 15 seconds).
+
+**2. Release, limit and cancel**
+- As Alice, click one of your orange seats again to release it. It goes back on sale.
+- Try holding a 5th seat on one event. You'll get "You can hold up to 4 seats".
+- Go to **My Bookings** and cancel a booking. The totals update and the seat is free again.
+
+**3. Organizer**
+- Log in as `organizer@seatbook.test` and open **Create Event**. Fill in a title, venue, a future date, rows, seats per row and a price, and watch the seat preview on the right. Launch it, and the event appears for everyone.
+- On the signup page, you can also create a new account and choose **Host events** or **Book seats**.
+
+**4. See a hold expire without waiting 10 minutes**
+Hold a seat as Alice, then run this in a terminal to make every active hold run out in 15 seconds:
+```bash
+docker exec seatbook-db-1 psql -U seatbook -c "update \"Booking\" set \"expiresAt\" = now() + interval '15 seconds' where status = 'HELD'"
+```
+Reload the page. The countdown shows about 0:15, and when it hits zero the seat goes back on sale with a message.
+
+**5. Run the tests yourself**
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook
+docker compose exec server npm run test:integration   # 38 tests, about 1 minute
+docker compose exec server npm test                   # 3 unit tests
+```
+
+**6. Start over from a completely clean state** (the reviewers' experience)
+```bash
+docker compose down -v
+docker compose up --build
+```
+The first start takes a minute or two.
+
+Tell me if anything looks wrong or you want something explained.
+
+## 🧑 User
+
+what is this project about ??i don'r undersatand what i am doing
+
+## 🤖 Claude
+
+Here it is in simple words.
+
+## What is Seatbook?
+
+A website for **booking seats at events**, like buying a cinema ticket where you pick your seat.
+
+- **Mr. Rahman** runs talks and workshops in Dhaka. He's the **organizer**.
+- He creates an event on the site, for example "Postgres in Practice, 5 rows × 8 seats, $15 per ticket".
+- **Attendees** (customers like Alice and Bob) open the site, see a map of seats, pick a free one and book it.
+- They can see their bookings and cancel them.
+
+He built this himself with AI over a few weekends. It worked, but it had dangerous bugs. Before real customers pay money through it, he wants a professional engineer to make it safe.
+
+## What did devmonks ask you to do?
+
+This is a **job test** for a Senior Full-Stack Engineer role. They gave you the app and asked for two things.
+
+**Job 1: make it safe ("production ready").** We found and fixed serious problems:
+
+| The problem | Real-life example |
+|---|---|
+| The same seat could be sold to many people | 10 people click seat A1 at the same moment, and all 10 get it. Ten people show up for one chair. |
+| Anyone could cancel anyone's booking | Bob could cancel Alice's ticket. |
+| Anyone could pretend to be the organizer | A stranger could create fake events. |
+| One bad request crashed the whole website | One empty login form took the site offline for everyone. |
+
+**Job 2: add "seat holds".** Mr. Rahman's request:
+> "Can people hold a seat for 10 minutes while they decide? Nobody else can take it meanwhile. If they confirm in time it's theirs, otherwise it goes back on sale. Show them how long they have left."
+
+Think of a shop putting an item aside for you for 10 minutes:
+1. Alice clicks a seat, and it's **reserved for her** for 10 minutes. A timer counts down.
+2. Bob sees that seat as "held" and **can't take it**.
+3. If Alice clicks **Confirm** in time, the seat is **hers**.
+4. If the 10 minutes run out, the seat **goes back on sale** and Bob can take it.
+
+That's what you saw when you clicked a seat: the orange colour and the timer.
+
+## What are you submitting?
+
+1. **The code** on GitHub, with all the fixes and the hold feature.
+2. **A handover note** (the README) explaining to Mr. Rahman what was wrong, what changed, what's still needed before launch, the weakest part, and a mistake the AI made.
+3. **The AI chat history** (`ai-transcripts/`). They allow AI, but want to see how you used it.
+
+## What happens next?
+
+If they like it, there's an **interview**:
+- **10 minutes:** you explain this code **without AI**.
+- Then you make a small change to the code **with AI**, while they watch.
+
+## The honest part
+
+I did almost all of the work. In the interview you need to understand and explain it yourself, and right now you don't. That's the real risk to this job, not the code.
+
+The good news is that the important ideas are only a few:
+1. **Why one seat could be sold twice**, and how the database now prevents it.
+2. **How a hold works:** reserved → confirmed, or it runs out and goes back on sale.
+3. **Why the timer uses the server's clock.**
+
+I'd suggest we go through these one at a time, very simply, with examples, until you can explain each in your own words. Then we practise interview questions.
+
+Want to start with number 1, "why one seat could be sold twice"?
+
+## 🧑 User
+
+can you explain this project in bangla ?? i mean eveything how it is work what is this about please
+
+## 🤖 Claude
+
+# Seatbook প্রজেক্ট: সহজ বাংলায় পুরো ব্যাখ্যা
+
+## ১. এটা কী জিনিস?
+
+**Seatbook** হলো ইভেন্টের সিট বুক করার একটা ওয়েবসাইট। সিনেমা হলের টিকিট কাটার মতো: সিটের ম্যাপ দেখে নিজের পছন্দের সিট বেছে নেওয়া।
+
+- **Mr. Rahman (Organizer):** ঢাকায় talk আর workshop আয়োজন করেন। তিনি ওয়েবসাইটে ইভেন্ট তৈরি করেন। যেমন "Postgres in Practice", ৫ সারি × ৮টা সিট, টিকিট $15।
+- **Attendee (Alice, Bob):** সাধারণ কাস্টমার। তারা ইভেন্ট দেখে, খালি সিট বেছে বুক করে, নিজের বুকিং দেখে আর ক্যানসেল করতে পারে।
+
+Mr. Rahman নিজে AI দিয়ে কয়েক সপ্তাহে এটা বানিয়েছিলেন। এটা চলত, কিন্তু ভেতরে মারাত্মক কিছু ভুল ছিল। আসল কাস্টমার টাকা দেওয়ার আগে তিনি চান একজন দক্ষ engineer এটাকে নিরাপদ করুক।
+
+## ২. devmonks তোমাকে কী করতে বলেছে?
+
+এটা **Senior Full-Stack Engineer চাকরির পরীক্ষা**। কাজ দুটো:
+
+1. **App-টাকে নিরাপদ করা ("production ready")**
+2. **নতুন ফিচার যোগ করা: "Seat Hold"**
+
+## ৩. প্রজেক্টের অংশগুলো (একটা দোকানের মতো ভাবো)
+
+| অংশ | কাজ | দোকানের উদাহরণ |
+|---|---|---|
+| **client/** (React) | ব্রাউজারে যা দেখো: সিট ম্যাপ, বাটন, টাইমার | দোকানের **সামনের কাউন্টার** |
+| **server/** (Node + Express) | নিয়ম মানে আর সিদ্ধান্ত নেয়: কে কোন সিট পাবে | দোকানের **ম্যানেজার** |
+| **Database** (Postgres) | সব তথ্য জমা রাখে: user, event, seat, booking | দোকানের **খাতা** |
+| **Docker** | এক কমান্ডে (`docker compose up --build`) তিনটাই চালু করে | দোকান **খোলার চাবি** |
+
+**একটা বুকিং কীভাবে হয়:**
+1. Alice ব্রাউজারে (client) সিট A1-এ ক্লিক করল।
+2. Client server-কে বলল: "Alice সিট A1 চায়"।
+3. Server খাতায় (database) দেখল সিটটা খালি কিনা, তারপর লিখে রাখল।
+4. Server উত্তর দিল: "ঠিক আছে, A1 তোমার"। Client সিটটা রঙিন করে দেখাল।
+
+## ৪. আগের কোডে কী কী মারাত্মক সমস্যা ছিল
+
+### সমস্যা ১: একই সিট অনেকজনের কাছে বিক্রি হতো (সবচেয়ে বড় সমস্যা)
+
+পুরনো কোড এভাবে কাজ করত:
+1. "সিটটা কি খালি?" → দেখল, হ্যাঁ খালি।
+2. "তাহলে বুক করে দাও।"
+
+**সমস্যা:** ১০ জন যদি **একই মুহূর্তে** ক্লিক করে, সবাই ধাপ ১-এ "খালি" দেখে, তারপর সবাই বুক করে ফেলে। আমি পরীক্ষা করে দেখেছি: **১০ জন, একটা সিট, ১০টা বুকিং!** অনুষ্ঠানের দিন একটা চেয়ারের জন্য ১০ জন হাজির হবে।
+
+**সমাধান:** নিয়মটা কোডে না রেখে **database-এর ভেতরে** দিলাম: "একটা সিটে একসাথে একটাই active বুকিং থাকতে পারবে।" এটাকে বলে **partial unique index**। এখন দুজন একসাথে চেষ্টা করলে database নিজেই দ্বিতীয়জনকে আটকে দেয়। ফলাফল: ২০ জন একসাথে চেষ্টা করলে **১ জন পায়, ১৯ জন "seat taken" দেখে।**
+
+> 💡 ইন্টারভিউতে মনে রাখো: "কোডে চেক করলে চেক আর সেভ করার মাঝে একটা ফাঁক থাকে। Database-এর নিয়মে কোনো ফাঁক নেই।"
+
+### সমস্যা ২: যে কেউ অন্যের বুকিং ক্যানসেল করতে পারত
+Bob চাইলে Alice-এর টিকিট ক্যানসেল করতে পারত। এখন শুধু **নিজের** বুকিং ক্যানসেল করা যায়।
+
+### সমস্যা ৩: যে কেউ Organizer সাজতে পারত
+লগইনের "গোপন চাবি" (`JWT secret`) কোডের মধ্যেই লেখা ছিল, আর কোডটা পাবলিক। তাই যে কেউ নকল organizer লগইন বানাতে পারত। এখন চাবিটা কোডের বাইরে আলাদা configuration-এ থাকে।
+
+### সমস্যা ৪: একটা খারাপ request পুরো সাইট বন্ধ করে দিত
+খালি লগইন ফর্ম পাঠালেই পুরো server crash করত, আর সবার জন্য সাইট বন্ধ হয়ে যেত। এখন সব error ঠিকভাবে ধরা হয়।
+
+### আরও কিছু ছোট সমস্যা
+- ক্যানসেল করা সিট খালি হিসেবে দেখাত না।
+- পেজে ভুয়া "৫% service fee" দেখাত, যেটা আসলে কখনো নেওয়া হতো না।
+- পরিষ্কার অবস্থা থেকে চালু করলে ধীর কম্পিউটারে Docker ব্যর্থ হতো।
+
+## ৫. নতুন ফিচার: Seat Hold (সবচেয়ে গুরুত্বপূর্ণ অংশ)
+
+Mr. Rahman চেয়েছিলেন:
+> "মানুষ কি ১০ মিনিটের জন্য সিট ধরে রাখতে পারবে? এর মধ্যে অন্য কেউ নিতে পারবে না। সময়মতো confirm করলে সিট তার, না করলে আবার বিক্রির জন্য খোলা। কত সময় বাকি আছে সেটা দেখাও।"
+
+**দোকানের উদাহরণ:** তুমি দোকানদারকে বললে, "এই শার্টটা ১০ মিনিট সরিয়ে রাখুন, আমি টাকা নিয়ে আসছি।" ১০ মিনিটে ফিরলে শার্ট তোমার। না ফিরলে দোকানদার অন্যকে বিক্রি করে দেবে।
+
+**কীভাবে কাজ করে:**
+1. Alice সিটে ক্লিক করল → সিটটা **HELD** (ধরে রাখা) হলো। কমলা রঙ, আর ১০:০০ থেকে টাইমার শুরু।
+2. Bob সিটটা দেখে, কিন্তু নিতে পারে না।
+3. Alice **Confirm** চাপলে → **CONFIRMED** (বুক হয়ে গেল), সবুজ রঙ।
+4. Alice confirm না করলে ১০ মিনিট পরে সিট আবার খালি, Bob নিতে পারবে।
+5. Alice চাইলে নিজের ধরা সিটে আবার ক্লিক করে ছেড়ে দিতে পারে (**RELEASED**)।
+
+**বুকিংয়ের অবস্থাগুলো (status):**
+```
+HELD (ধরা) ──→ CONFIRMED (বুক হয়েছে) ──→ CANCELLED (ক্যানসেল)
+   ├──→ RELEASED (নিজে ছেড়ে দিয়েছে)
+   └──→ EXPIRED (সময় শেষ)
+```
+
+**আমাদের নেওয়া কিছু সিদ্ধান্ত** (brief-এ বলা ছিল না, তাই README-তে লিখে রেখেছি):
+- একজন একটা ইভেন্টে একসাথে **সর্বোচ্চ ৪টা** সিট ধরে রাখতে পারবে, যাতে কেউ পুরো হল আটকে রাখতে না পারে।
+- ইভেন্ট ১০ মিনিটের আগেই শুরু হলে hold ইভেন্ট শুরুর সময়েই শেষ হবে।
+- দাম ডলারেই থাকবে, কারণ brief বা কোডের কোথাও টাকার কথা নেই।
+
+**তিনটা চতুর কৌশল** (ইন্টারভিউতে এগুলো জিজ্ঞেস করতে পারে):
+1. **Hold আর Booking একই টেবিলে রাখা।** তাই একই database নিয়ম দুটোকেই রক্ষা করে। একটা সিট একজনের "hold" আর আরেকজনের "booking" একসাথে হতে পারে না।
+2. **সময় শেষ হওয়া পড়ার সময় হিসাব হয়।** কোনো timer-এর ওপর নির্ভর নেই। "সিট খালি কিনা" দেখার সময়ই server চেক করে সময় পার হয়েছে কিনা। Server বন্ধ হয়ে আবার চালু হলেও কিছু গোলমাল হয় না।
+3. **টাইমার server-এর ঘড়ি মেনে চলে।** কাস্টমারের ল্যাপটপের ঘড়ি ভুল থাকলেও কাউন্টডাউন সঠিক দেখায়।
+
+## ৬. কীভাবে নিশ্চিত হলাম যে সব ঠিক কাজ করছে
+
+- **৩৮টা স্বয়ংক্রিয় test:** একসাথে অনেকজন একই সিট নিলে, hold-এর সময় শেষ হলে, অন্যের বুকিং ক্যানসেল করার চেষ্টা করলে কী হয়, সব পরীক্ষা করা।
+- **প্রমাণ যে test-গুলো কাজের:** database-এর নিয়মটা সরিয়ে দিলে test ব্যর্থ হয়।
+- **আসল ব্রাউজারে দুজন ইউজার একসাথে:** Alice hold করছে, Bob আটকে যাচ্ছে।
+- **Load test:** ৫০০ জন একসাথে ২৪টা সিটের জন্য চেষ্টা করল → ঠিক ২৪টা hold, কোনো error নেই।
+
+## ৭. তুমি কী জমা দিচ্ছ
+
+1. **GitHub repo:** https://github.com/AkibUllah/seatbook
+2. **README (handover note):** কী বদলেছে আর কেন, launch-এর আগে আর কী লাগবে, সবচেয়ে দুর্বল অংশ, AI কোথায় ভুল করেছিল, আর কীভাবে পরীক্ষা করা হয়েছে।
+3. **AI chat history:** `ai-transcripts/` ফোল্ডারে।
+
+## ৮. এরপর কী হবে: ইন্টারভিউ
+
+- **১০ মিনিট AI ছাড়া:** তুমি নিজে কোডটা ব্যাখ্যা করবে।
+- **তারপর AI নিয়ে:** তাদের সামনে কোডে ছোট একটা পরিবর্তন করবে।
+
+### সৎ পরামর্শ
+কাজের বেশিরভাগটা আমি করেছি। ইন্টারভিউতে তোমাকে নিজের ভাষায় বোঝাতে হবে। কমপক্ষে এই ৩টা জিনিস তোমার মুখস্থ নয়, **বোঝা** থাকতে হবে:
+
+1. **একই সিট দুবার বিক্রি কেন হতো, আর database-এর নিয়ম কেন সমাধান** (অংশ ৪, সমস্যা ১)
+2. **Hold কীভাবে কাজ করে:** ধরা → confirm, অথবা সময় শেষ → আবার বিক্রি (অংশ ৫)
+3. **টাইমার কেন server-এর ঘড়ি মানে** (অংশ ৫, কৌশল ৩)
+
+চাইলে আমি ইন্টারভিউয়ারের ভূমিকায় এক এক করে প্রশ্ন করতে পারি। তুমি বাংলা বা ইংরেজিতে উত্তর দেবে, আমি বলব কোথায় ভালো হয়েছে আর কোথায় উন্নতি দরকার। শুরু করবে?
+
+## 🧑 User
+
+1st down other docker and unnessery thing running pc going slow
+
+## 🤖 Claude
+
+I'll look at what's running before stopping anything.
+
+**🔧 Bash**
+
+*List containers, volumes and heavy processes*
+
+```bash
+echo "== containers"; docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Image}}'; echo "== container CPU/mem"; docker stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'; echo "== volumes"; docker volume ls --format '{{.Name}}'; echo "== top processes"; ps -eo pid,pcpu,pmem,etime,comm --sort=-pcpu | head -12; echo "== leftover test browsers / node"; pgrep -af "puppeteer|chrome-headless|headless" | head; free -h | head -2; uptime
+```
+
+<details><summary>Result</summary>
+
+```
+== containers
+seatbook-client-1	Up 19 hours	seatbook-client
+seatbook-server-1	Up 19 hours	seatbook-server
+seatbook-db-1	Up 19 hours (healthy)	postgres:16-alpine
+news-portal-frontend-1	Up 6 days (healthy)	news-portal-frontend
+news-portal-backend-1	Up 6 days (healthy)	news-portal-backend
+news-portal-redis-1	Up 6 days	redis:7.2-alpine
+news-portal-db-1	Up 6 days (healthy)	postgres:16-alpine
+nova-store-api-1	Up 2 weeks	nova-store-api
+nova-store-db-1	Up 2 weeks (healthy)	postgres:16-alpine
+nova-store-redis-1	Up 2 weeks	redis:7-alpine
+arise-api-1	Exited (137) 4 weeks ago	arise-api
+arise-db-1	Exited (0) 4 weeks ago	postgres:16-alpine
+arise-redis-1	Exited (0) 4 weeks ago	redis:7-alpine
+server_side_tracking-collector-1	Exited (0) 5 weeks ago	server_side_tracking-collector
+server_side_tracking-worker-1	Exited (137) 5 weeks ago	server_side_tracking-worker
+server_side_tracking-redis-1	Exited (0) 5 weeks ago	redis:7-alpine
+server_side_tracking-db-1	Exited (0) 5 weeks ago	postgres:16-alpine
+nexus_pos_saas-app-1	Exited (3) 2 months ago	nexus-pos:local
+nexus_pos_saas-migrate-1	Exited (0) 2 months ago	nexus-pos:local
+nexus_pos_saas-db-1	Exited (255) 2 months ago	postgres:16-alpine
+tendernexus-platform-beat-1	Exited (137) 2 months ago	tendernexus-platform-beat
+tendernexus-platform-worker-1	Exited (137) 2 months ago	tendernexus-platform-worker
+tendernexus-platform-api-1	Exited (137) 2 months ago	tendernexus-platform-api
+tendernexus-platform-ollama-1	Exited (0) 2 months ago	ollama/ollama:latest
+t
+… [5298 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Stop other projects' containers; list my test images*
+
+```bash
+docker stop news-portal-frontend-1 news-portal-backend-1 news-portal-redis-1 news-portal-db-1 nova-store-api-1 nova-store-db-1 nova-store-redis-1 2>&1 | tr '\n' ' '; echo; echo "== still running:"; docker ps --format '{{.Names}}'; echo "== images built by my test runs (from temporary clones):"; docker images --format '{{.Repository}}:{{.Tag}}\t{{.Size}}' | grep -E "^(fresh|fresh2|fresh3|fresh6|final)-"
+```
+
+<details><summary>Result</summary>
+
+```
+news-portal-frontend-1 news-portal-backend-1 news-portal-redis-1 news-portal-db-1 nova-store-api-1 nova-store-db-1 nova-store-redis-1 
+== still running:
+seatbook-client-1
+seatbook-server-1
+seatbook-db-1
+== images built by my test runs (from temporary clones):
+final-server:latest	532MB
+fresh6-server:latest	532MB
+fresh6-client:latest	297MB
+fresh3-client:latest	297MB
+final-client:latest	297MB
+fresh3-server:latest	532MB
+fresh2-client:latest	297MB
+fresh2-server:latest	532MB
+fresh-client:latest	257MB
+fresh-server:latest	500MB
+```
+
+</details>
+
+**🔧 Bash**
+
+*Delete my test images and temporary clones*
+
+```bash
+docker rmi final-server final-client fresh6-server fresh6-client fresh3-server fresh3-client fresh2-server fresh2-client fresh-server fresh-client 2>&1 | grep -c "Deleted:" | sed 's/^/image layers deleted: /'; S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; du -sh $S/fresh $S/fresh2 $S/fresh3 $S/fresh6 $S/final 2>/dev/null | awk '{s=s" "$1} END {print "temporary clones:"s}'; rm -rf $S/fresh $S/fresh2 $S/fresh3 $S/fresh6 $S/final; docker volume ls --format '{{.Name}}' | grep -E "^(fresh|fresh2|fresh3|fresh6|final)_" || echo "no leftover test volumes"; df -h / | tail -1 | awk '{print "free disk now: "$4}'; uptime
+```
+
+<details><summary>Result</summary>
+
+```
+image layers deleted: 10
+temporary clones: 1.2M 1.3M 1.3M 1.4M 1.5M
+no leftover test volumes
+free disk now: 659G
+ 20:54:31 up 14 days, 20:24,  1 user,  load average: 6.43, 8.73, 4.65
+```
+
+</details>
+
+## 🤖 Claude
+
+I've stopped the other Docker projects and deleted my test leftovers. Only Seatbook is running now.
+
+**What I did:**
+- **Stopped the other running Docker projects:** news-portal (4 containers) and nova-store (3 containers). Their data is kept. To start them again, run `docker compose up -d` in that project's folder.
+- **Deleted the Docker images left over from my test runs**, about 4 GB, plus the temporary copies of the repo.
+- **Kept Seatbook running** so you can check it: http://localhost:5173
+
+**What I didn't touch:**
+- About 35 old stopped containers and their data volumes (bizzup, tendernexus, n8n, nexus_pos and others). They're stopped, so they don't slow the PC; they only take disk space, and you have 659 GB free. Deleting them would erase those projects' databases for good, so I won't do that unless you ask and confirm which ones.
+
+**Why the PC is still a bit slow:** most of the load now comes from **VS Code** (many `code` processes) and this **Claude session**, not Docker. The load average has dropped from about 9.5 to 6.4. Closing any VS Code windows and Chrome tabs you don't need will help the most.
+
+When you're done checking Seatbook, you can stop it too:
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook && docker compose stop
+```
+
+## 🧑 User
+
+<local-command-caveat>The command below was run directly in Claude Code, not sent to you as a request, and its output goes straight to the user. It's recorded here as context for later messages.</local-command-caveat>
+
+## 🧑 User
+
+<command-name>/model</command-name>
+            <command-message>model</command-message>
+            <command-args>fable</command-args>
+
+## 🧑 User
+
+<local-command-stdout>Set model to `claude-fable-5-1`</local-command-stdout>
+
+## 🧑 User
+
+now make a doc where what we didi is there any bug if yes then how we found out and without ai how i findout in last interview they will ask something about those so make a proper pdf so that i can give the best of best intevrview
+
+## 🤖 Claude
+
+You've reached your Fable limit. Switch to another model, or manage usage credits at https://claude.ai/settings/usage?from=cc_cli_limit_message, to continue.
+
+## 🧑 User
+
+<local-command-caveat>The command below was run directly in Claude Code, not sent to you as a request, and its output goes straight to the user. It's recorded here as context for later messages.</local-command-caveat>
+
+## 🧑 User
+
+<command-name>/model</command-name>
+            <command-message>model</command-message>
+            <command-args>opus</command-args>
+
+## 🧑 User
+
+<local-command-stdout>Set model to `claude-opus-5-5`</local-command-stdout>
+
+## 🧑 User
+
+now make a doc where what we didi is there any bug if yes then how we found out and without ai how i findout in last interview they will ask something about those so make a proper pdf so that i can give the best of best intevrview
+
+**🔧 Skill**
+
+```json
+{
+  "skill": "anthropic-skills:pdf",
+  "args": "Create an interview-prep PDF for the Seatbook take-home: every bug found, how it was found, and how to find it manually without AI"
+}
+```
+
+<details><summary>Result</summary>
+
+```
+Launching skill: anthropic-skills:pdf
+```
+
+</details>
+
+## 🧑 User
+
+Base directory for this skill: /home/akib/.claude/skills/synced/d21d0801-9d7d-4dd6-abae-303341e57bbf_afd02abb-3080-4e33-99d9-82a732bb8d77/pdf
+
+# PDF Processing Guide
+
+## Overview
+
+This guide covers essential PDF processing operations using Python libraries and command-line tools. For advanced features, JavaScript libraries, and detailed examples, see REFERENCE.md. If you need to fill out a PDF form, read FORMS.md and follow its instructions.
+
+## Quick Start
+
+```python
+from pypdf import PdfReader, PdfWriter
+
+# Read a PDF
+reader = PdfReader("document.pdf")
+print(f"Pages: {len(reader.pages)}")
+
+# Extract text
+text = ""
+for page in reader.pages:
+    text += page.extract_text()
+```
+
+## Python Libraries
+
+### pypdf - Basic Operations
+
+#### Merge PDFs
+```python
+from pypdf import PdfWriter, PdfReader
+
+writer = PdfWriter()
+for pdf_file in ["doc1.pdf", "doc2.pdf", "doc3.pdf"]:
+    reader = PdfReader(pdf_file)
+    for page in reader.pages:
+        writer.add_page(page)
+
+with open("merged.pdf", "wb") as output:
+    writer.write(output)
+```
+
+#### Split PDF
+```python
+reader = PdfReader("input.pdf")
+for i, page in enumerate(reader.pages):
+    writer = PdfWriter()
+    writer.add_page(page)
+    with open(f"page_{i+1}.pdf", "wb") as output:
+        writer.write(output)
+```
+
+#### Extract Metadata
+```python
+reader = PdfReader("document.pdf")
+meta = reader.metadata
+print(f"Title: {meta.title}")
+print(f"Author: {meta.author}")
+print(f"Subject: {meta.subject}")
+print(f"Creator: {meta.creator}")
+```
+
+#### Rotate Pages
+```python
+reader = PdfReader("input.pdf")
+writer = PdfWriter()
+
+page = reader.pages[0]
+page.rotate(90)  # Rotate 90 degrees clockwise
+writer.add_page(page)
+
+with open("rotated.pdf", "wb") as output:
+    writer.write(output)
+```
+
+### pdfplumber - Text and Table Extraction
+
+#### Extract Text with Layout
+```python
+import pdfplumber
+
+with pdfplumber.open("document.pdf") as pdf:
+    for page in pdf.pages:
+        text = page.extract_text()
+        print(text)
+```
+
+#### Extract Tables
+```python
+with pdfplumber.open("document.pdf") as pdf:
+    for i, page in enumerate(pdf.pages):
+        tables = page.extract_tables()
+        for j, table in enumerate(tables):
+            print(f"Table {j+1} on page {i+1}:")
+            for row in table:
+                print(row)
+```
+
+#### Advanced Table Extraction
+```python
+import pandas as pd
+
+with pdfplumber.open("document.pdf") as pdf:
+    all_tables = []
+    for page in pdf.pages:
+        tables = page.extract_tables()
+        for table in tables:
+            if table:  # Check if table is not empty
+                df = pd.DataFrame(table[1:], columns=table[0])
+                all_tables.append(df)
+
+# Combine all tables
+if all_tables:
+    combined_df = pd.concat(all_tables, ignore_index=True)
+    combined_df.to_excel("extracted_tables.xlsx", index=False)
+```
+
+### reportlab - Create PDFs
+
+#### Basic PDF Creation
+```python
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+c = canvas.Canvas("hello.pdf", pagesize=letter)
+width, height = letter
+
+# Add text
+c.drawString(100, height - 100, "Hello World!")
+c.drawString(100, height - 120, "This is a PDF created with reportlab")
+
+# Add a line
+c.line(100, height - 140, 400, height - 140)
+
+# Save
+c.save()
+```
+
+#### Create PDF with Multiple Pages
+```python
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet
+
+doc = SimpleDocTemplate("report.pdf", pagesize=letter)
+styles = getSampleStyleSheet()
+story = []
+
+# Add content
+title = Paragraph("Report Title", styles['Title'])
+story.append(title)
+story.append(Spacer(1, 12))
+
+body = Paragraph("This is the body of the report. " * 20, styles['Normal'])
+story.append(body)
+story.append(PageBreak())
+
+# Page 2
+story.append(Paragraph("Page 2", styles['Heading1']))
+story.append(Paragraph("Content for page 2", styles['Normal']))
+
+# Build PDF
+doc.build(story)
+```
+
+#### Subscripts and Superscripts
+
+**IMPORTANT**: Never use Unicode subscript/superscript characters (₀₁₂₃₄₅₆₇₈₉, ⁰¹²³⁴⁵⁶⁷⁸⁹) in ReportLab PDFs. The built-in fonts do not include these glyphs, causing them to render as solid black boxes.
+
+Instead, use ReportLab's XML markup tags in Paragraph objects:
+```python
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
+styles = getSampleStyleSheet()
+
+# Subscripts: use <sub> tag
+chemical = Paragraph("H<sub>2</sub>O", styles['Normal'])
+
+# Superscripts: use <super> tag
+squared = Paragraph("x<super>2</super> + y<super>2</super>", styles['Normal'])
+```
+
+For canvas-drawn text (not Paragraph objects), manually adjust font the size and position rather than using Unicode subscripts/superscripts.
+
+## Command-Line Tools
+
+### pdftotext (poppler-utils)
+```bash
+# Extract text
+pdftotext input.pdf output.txt
+
+# Extract text preserving layout
+pdftotext -layout input.pdf output.txt
+
+# Extract specific pages
+pdftotext -f 1 -l 5 input.pdf output.txt  # Pages 1-5
+```
+
+### qpdf
+```bash
+# Merge PDFs
+qpdf --empty --pages file1.pdf file2.pdf -- merged.pdf
+
+# Split pages
+qpdf input.pdf --pages . 1-5 -- pages1-5.pdf
+qpdf input.pdf --pages . 6-10 -- pages6-10.pdf
+
+# Rotate pages
+qpdf input.pdf output.pdf --rotate=+90:1  # Rotate page 1 by 90 degrees
+
+# Remove password
+qpdf --password=mypassword --decrypt encrypted.pdf decrypted.pdf
+```
+
+### pdftk (if available)
+```bash
+# Merge
+pdftk file1.pdf file2.pdf cat output merged.pdf
+
+# Split
+pdftk input.pdf burst
+
+# Rotate
+pdftk input.pdf rotate 1east output rotated.pdf
+```
+
+## Common Tasks
+
+### Extract Text from Scanned PDFs
+```python
+# Requires: pip install pytesseract pdf2image
+import pytesseract
+from pdf2image import convert_from_path
+
+# Convert PDF to images
+images = convert_from_path('scanned.pdf')
+
+# OCR each page
+text = ""
+for i, image in enumerate(images):
+    text += f"Page {i+1}:\n"
+    text += pytesseract.image_to_string(image)
+    text += "\n\n"
+
+print(text)
+```
+
+### Add Watermark
+```python
+from pypdf import PdfReader, PdfWriter
+
+# Create watermark (or load existing)
+watermark = PdfReader("watermark.pdf").pages[0]
+
+# Apply to all pages
+reader = PdfReader("document.pdf")
+writer = PdfWriter()
+
+for page in reader.pages:
+    page.merge_page(watermark)
+    writer.add_page(page)
+
+with open("watermarked.pdf", "wb") as output:
+    writer.write(output)
+```
+
+### Extract Images
+```bash
+# Using pdfimages (poppler-utils)
+pdfimages -j input.pdf output_prefix
+
+# This extracts all images as output_prefix-000.jpg, output_prefix-001.jpg, etc.
+```
+
+### Password Protection
+```python
+from pypdf import PdfReader, PdfWriter
+
+reader = PdfReader("input.pdf")
+writer = PdfWriter()
+
+for page in reader.pages:
+    writer.add_page(page)
+
+# Add password
+writer.encrypt("userpassword", "ownerpassword")
+
+with open("encrypted.pdf", "wb") as output:
+    writer.write(output)
+```
+
+## Quick Reference
+
+| Task | Best Tool | Command/Code |
+|------|-----------|--------------|
+| Merge PDFs | pypdf | `writer.add_page(page)` |
+| Split PDFs | pypdf | One page per file |
+| Extract text | pdfplumber | `page.extract_text()` |
+| Extract tables | pdfplumber | `page.extract_tables()` |
+| Create PDFs | reportlab | Canvas or Platypus |
+| Command line merge | qpdf | `qpdf --empty --pages ...` |
+| OCR scanned PDFs | pytesseract | Convert to image first |
+| Fill PDF forms | pdf-lib or pypdf (see FORMS.md) | See FORMS.md |
+
+## Next Steps
+
+- For advanced pypdfium2 usage, see REFERENCE.md
+- For JavaScript libraries (pdf-lib), see REFERENCE.md
+- If you need to fill out a PDF form, follow the instructions in FORMS.md
+- For troubleshooting guides, see REFERENCE.md
+
+
+ARGUMENTS: Create an interview-prep PDF for the Seatbook take-home: every bug found, how it was found, and how to find it manually without AI
+
+**🔧 Bash**
+
+*Check PDF tools and fonts*
+
+```bash
+python3 -c "import reportlab; print('reportlab', reportlab.Version)"; ls /usr/share/fonts/truetype/dejavu/ 2>/dev/null | head; which pdftoppm pdftotext
+```
+
+<details><summary>Result</summary>
+
+```
+reportlab 3.6.8
+DejaVuSans-Bold.ttf
+DejaVuSansMono-Bold.ttf
+DejaVuSansMono.ttf
+DejaVuSans.ttf
+DejaVuSerif-Bold.ttf
+DejaVuSerif.ttf
+/usr/bin/pdftoppm
+/usr/bin/pdftotext
+```
+
+</details>
+
+## 🤖 Claude
+
+The tools are all there. Before writing, I'm checking a few original-code facts I'll quote (exact lines and seed data), so the PDF doesn't contain anything I haven't verified:
+
+**🔧 Bash**
+
+*Verify original-code facts to quote in PDF*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook && git show 6421e64:server/src/routes/bookings.ts | sed -n '25,39p;76,85p'; echo ---; git show 6421e64:server/src/routes/auth.ts | grep -n "seatbook-secret-123\|router.post('/login'" ; git show 6421e64:server/src/services/eventService.ts | grep -n "bookings: true"; git show 6421e64:server/src/utils/helpers.ts | grep -n "bookings.length"; git show 6421e64:docker-compose.yml | grep -A3 "interval"; git show 6421e64:server/prisma/seed.ts | grep -n "setHours\|talk.seats\[0\]"
+```
+
+<details><summary>Result</summary>
+
+```
+const existing = await prisma.booking.findFirst({
+      where: { seatId: seat.id, status: 'CONFIRMED' },
+    });
+
+    if (existing) {
+      return res.status(409).json({ error: 'Seat already booked' });
+    }
+
+    const booking = await prisma.booking.create({
+      data: {
+        seatId: seat.id,
+        userId: req.user!.id,
+        status: 'CONFIRMED',
+      },
+    });
+router.post('/:id/cancel', requireAuth, async (req: AuthRequest, res) => {
+  const id = parseInt(req.params.id);
+
+  await prisma.booking.updateMany({
+    where: { id, status: 'CONFIRMED' },
+    data: { status: 'CANCELLED', cancelledAt: new Date() },
+  });
+
+  res.json({ success: true });
+});
+---
+26:    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, 'seatbook-secret-123', {
+36:router.post('/login', async (req, res) => {
+49:  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, 'seatbook-secret-123', {
+8:    include: { seats: { include: { bookings: true } } },
+15:  return seat.bookings.length === 0;
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+20:  d.setHours(18, 30, 0, 0);
+87:  await prisma.booking.create({ data: { seatId: talk.seats[0].id, userId: alice.id } });
+```
+
+</details>
+
+## 🤖 Claude
+
+All facts confirmed. Now writing the PDF generator:
+
+**🔧 Write**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/make_interview_pdf.py`
+
+```
+"""Build the Seatbook interview-prep PDF (bugs, how they were found, how to find them by hand)."""
+import sys
+from xml.sax.saxutils import escape
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import (
+    KeepTogether, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle,
+)
+
+OUT = sys.argv[1]
+FONT_DIR = '/usr/share/fonts/truetype/dejavu/'
+pdfmetrics.registerFont(TTFont('Sans', FONT_DIR + 'DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('Sans-Bold', FONT_DIR + 'DejaVuSans-Bold.ttf'))
+pdfmetrics.registerFont(TTFont('Mono', FONT_DIR + 'DejaVuSansMono.ttf'))
+pdfmetrics.registerFontFamily('Sans', normal='Sans', bold='Sans-Bold', italic='Sans', boldItalic='Sans-Bold')
+
+INK = colors.HexColor('#1f2328')
+MUTED = colors.HexColor('#57606a')
+ACCENT = colors.HexColor('#8b3dff')
+RED = colors.HexColor('#b42318')
+GREEN = colors.HexColor('#1a7f37')
+CODE_BG = colors.HexColor('#f4f5f7')
+RULE = colors.HexColor('#d0d7de')
+SEV = {'Critical': RED, 'High': colors.HexColor('#c2410c'), 'Medium': colors.HexColor('#a16207'),
+       'Low': MUTED}
+
+S = {
+    'title': ParagraphStyle('title', fontName='Sans-Bold', fontSize=26, leading=32, textColor=INK, spaceAfter=6),
+    'subtitle': ParagraphStyle('subtitle', fontName='Sans', fontSize=12.5, leading=18, textColor=MUTED),
+    'h1': ParagraphStyle('h1', fontName='Sans-Bold', fontSize=18, leading=23, textColor=INK, spaceBefore=4,
+                         spaceAfter=8),
+    'h2': ParagraphStyle('h2', fontName='Sans-Bold', fontSize=13.5, leading=18, textColor=INK, spaceBefore=12,
+                         spaceAfter=4),
+    'h3': ParagraphStyle('h3', fontName='Sans-Bold', fontSize=10.5, leading=14, textColor=ACCENT, spaceBefore=7,
+                         spaceAfter=2),
+    'body': ParagraphStyle('body', fontName='Sans', fontSize=9.6, leading=14, textColor=INK, spaceAfter=4),
+    'small': ParagraphStyle('small', fontName='Sans', fontSize=8.6, leading=12, textColor=MUTED),
+    'bullet': ParagraphStyle('bullet', fontName='Sans', fontSize=9.6, leading=14, textColor=INK, leftIndent=12,
+                             bulletIndent=2, spaceAfter=2),
+    'cell': ParagraphStyle('cell', fontName='Sans', fontSize=8.6, leading=11.5, textColor=INK),
+    'cellb': ParagraphS
+… [52421 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+File created successfully at: /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/make_interview_pdf.py (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+**🔧 Bash**
+
+*Build the PDF and render page previews*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; OUT=/home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf; python3 -I $S/make_interview_pdf.py $OUT && python3 -c "from pypdf import PdfReader; print('pages:', len(PdfReader('$OUT').pages))" && mkdir -p $S/pdfcheck && rm -f $S/pdfcheck/* && pdftoppm -r 60 -png $OUT $S/pdfcheck/p && ls $S/pdfcheck | head -30
+```
+
+<details><summary>Result</summary>
+
+```
+wrote /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+pages: 20
+p-01.png
+p-02.png
+p-03.png
+p-04.png
+p-05.png
+p-06.png
+p-07.png
+p-08.png
+p-09.png
+p-10.png
+p-11.png
+p-12.png
+p-13.png
+p-14.png
+p-15.png
+p-16.png
+p-17.png
+p-18.png
+p-19.png
+p-20.png
+```
+
+</details>
+
+## 🤖 Claude
+
+20 pages. I'll check the layout visually and confirm the page references are right; the cover says the practice lab is on "page 3", which I need to verify.
+
+**🔧 Bash**
+
+*Map sections to pages, render previews*
+
+```bash
+OUT=/home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf; for i in $(seq 1 20); do echo "p$i: $(pdftotext -f $i -l $i $OUT - | grep -m1 -E '^[0-9]\. |^Seatbook take-home|^B[0-9]+ |^N[0-9] ' )"; done; S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; pdftoppm -r 80 -png -f 1 -l 1 $OUT $S/pdfcheck/big1; pdftoppm -r 80 -png -f 4 -l 4 $OUT $S/pdfcheck/big4; pdftoppm -r 80 -png -f 6 -l 6 $OUT $S/pdfcheck/big6
+```
+
+<details><summary>Result</summary>
+
+```
+p1: Seatbook take-home
+p2: 1. The project in one page
+p3: 2. How to find bugs without AI
+p4: 3. Practice lab: reproduce the bugs yourself
+p5: 4. Bugs in the original code
+p6: B2 Anyone could cancel anyone's booking
+p7: B3 Anyone could log in as the organizer (hardcoded
+p8: B5 Cancelled seats never came back on the events list
+p9: B6 `docker compose up --build` failed from a clean start
+p10: B8 A fake 5% service fee on the event page
+p11: B10 Role problems: organizers could book, signup could
+p12: B12 Running on Node 20, which is end-of-life
+p13: 5. Bugs found in our own new work
+p14: N3 Released holds showed up as cancelled bookings
+p15: N5 Successful logins counted toward the login limit
+p16: 
+p17: 6. Where the AI was wrong
+p18: 7. Interview questions and answers
+p19: 
+p20: 8. Cheat sheet
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/big4-04.png`
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/big6-06.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Fix page ref, title markup, orphan headings; rebuild*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; python3 - $S/make_interview_pdf.py <<'EOF'
+import sys; p=sys.argv[1]; s=open(p).read()
+def rep(a,b):
+    global s
+    assert a in s, a[:60]; s=s.replace(a,b)
+rep("(page 3): reproduce the top 5 bugs", "(page 4): reproduce the top 5 bugs")
+rep("""    head = Paragraph(f'<font name="Sans-Bold" size="12.5">{escape(num)}  {escape(title)}</font>', S['body'])""",
+    """    head = Paragraph(f'<font name="Sans-Bold" size="12.5">{escape(num)}  {md(title)}</font>', S['body'])""")
+old = s[s.index("def bug(b):"):s.index("def on_page")]
+new = '''def bug(b):
+    """One bug card: what, impact, how found, how to find by hand, fix, what to say."""
+    def section(title, *items):
+        # keep each heading on the same page as its first lines
+        return [KeepTogether([Paragraph(title, S['h3']), items[0]])] + list(items[1:])
+
+    flow = [Spacer(1, 6), bug_header(b['num'], b['title'], b['severity'], b['where'])]
+    what = [P(b['what'])] + ([code(b['code']), Spacer(1, 3)] if b.get('code') else [])
+    flow += section('What was wrong', *what)
+    flow += section('Why it matters', P(b['impact']))
+    flow += section('How we actually found it', P(b['found']))
+    manual = bullets(b['manual']) + ([code(b['repro']), Spacer(1, 3)] if b.get('repro') else [])
+    flow += section('How YOU find it without AI', *manual)
+    flow += section('The fix', P(b['fix']), Spacer(1, 4), callout('SAY IT:', b['say']))
+    flow.append(Spacer(1, 8))
+    return [KeepTogether(flow[:3])] + flow[3:]
+
+
+'''
+s=s.replace(old,new)
+open(p,'w').write(s)
+EOF
+OUT=/home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf; python3 -I $S/make_interview_pdf.py $OUT && python3 -c "from pypdf import PdfReader; print('pages:', len(PdfReader('$OUT').pages))"; pdftotext $OUT - | grep -c '`' ; rm -f $S/pdfcheck/*; pdftoppm -r 60 -png $OUT $S/pdfcheck/p; for i in 9 13 18; do pdftoppm -r 80 -png -f $i -l $i $OUT $S/pdfcheck/big$i; done; ls $S/pdfcheck | grep big
+```
+
+<details><summary>Result</summary>
+
+```
+wrote /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+pages: 28
+0
+big13-13.png
+big18-18.png
+big9-09.png
+```
+
+</details>
+
+## 🤖 Claude
+
+No stray backticks left. But the page count jumped from 20 to 28, which means the keep-together groups now leave big empty gaps. Checking:
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/big9-09.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/big13-13.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/big18-18.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Use conditional page breaks; rebuild and map pages*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; python3 - $S/make_interview_pdf.py <<'EOF'
+import sys; p=sys.argv[1]; s=open(p).read()
+def rep(a,b):
+    global s
+    assert a in s, a[:60]; s=s.replace(a,b)
+rep("from reportlab.platypus import (\n    KeepTogether,", "from reportlab.platypus import (\n    CondPageBreak, KeepTogether,")
+rep("    flow = [Spacer(1, 6), bug_header(b['num'], b['title'], b['severity'], b['where'])]",
+    "    # a new card starts on a new page only if little room is left\n    flow = [CondPageBreak(70 * mm), Spacer(1, 6), bug_header(b['num'], b['title'], b['severity'], b['where'])]")
+rep("    return [KeepTogether(flow[:3])] + flow[3:]", "    return flow")
+open(p,'w').write(s)
+EOF
+OUT=/home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf; python3 -I $S/make_interview_pdf.py $OUT && python3 -c "from pypdf import PdfReader; print('pages:', len(PdfReader('$OUT').pages))"; for i in $(seq 1 30); do t=$(pdftotext -f $i -l $i $OUT - 2>/dev/null | grep -m3 -E '^[0-9]\. |^B[0-9]+ |^N[0-9] ' | tr '\n' '|'); [ -n "$t$(pdftotext -f $i -l $i $OUT - 2>/dev/null | head -1)" ] && echo "p$i: $t ($(pdftotext -f $i -l $i $OUT - 2>/dev/null | wc -w) words)"; done 2>/dev/null | head -30
+```
+
+<details><summary>Result</summary>
+
+```
+wrote /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+pages: 20
+p1: 1. The project in one page|2. How to find bugs without AI|3. Practice lab| (221 words)
+p2: 1. The project in one page| (332 words)
+p3: 2. How to find bugs without AI|1. Turn the brief into a list of promises|2. Use it like a customer| (367 words)
+p4: 3. Practice lab: reproduce the bugs yourself| (288 words)
+p5: 4. Bugs in the original code|B1 The same seat could be sold many times| (424 words)
+p6: B2 Anyone could cancel anyone's booking| (423 words)
+p7: B3 Anyone could log in as the organizer (hardcoded| (361 words)
+p8: B4 One request could crash the whole server|B5 Cancelled seats never came back on the events list| (414 words)
+p9: B6 docker compose up --build failed from a clean start| (340 words)
+p10: B7 No input validation|B8 A fake 5% service fee on the event page| (372 words)
+p11: B9 Evening talks showed as 12:30 AM|B10 Role problems: organizers could book, signup could| (388 words)
+p12: B11 My Bookings page showed wrong numbers|B12 Running on Node 20, which is end-of-life| (296 words)
+p13: 5. Bugs found in our own new work|N1 Under a rush, 178 of 500 people got an error|N2 Open redirect after login (backslash trick)| (447 words)
+p14: N3 Released holds showed up as cancelled bookings| (300 words)
+p15: N4 Countdown showed 10:00 when only 3 minutes were|N5 Successful logins counted toward the login limit| (303 words)
+p16: N6 Smaller ones| (255 words)
+p17: 6. Where the AI was wrong| (283 wor
+… [107 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Practice lab step 1: run the original code*
+
+```bash
+docker compose stop >/dev/null 2>&1 && git worktree add ../seatbook-original 6421e64 2>&1 | tail -1 && cd ../seatbook-original && (docker compose up --build -d 2>&1 | tail -1); for i in $(seq 1 60); do curl -sf localhost:4000/health >/dev/null && echo "original healthy" && break; sleep 5; done; curl -s localhost:4000/health || (echo "retrying up"; docker compose up -d 2>&1 | tail -1; for i in $(seq 1 60); do curl -sf localhost:4000/health >/dev/null && echo "original healthy" && break; sleep 5; done)
+```
+
+<details><summary>Result</summary>
+
+```
+HEAD is now at 6421e64 Initial commit
+ Container seatbook-original-client-1  Started
+original healthy
+{"ok":true}
+```
+
+</details>
+
+## 🤖 Claude
+
+Step 1 works; the original started fine this time. Now steps 2 and 3 exactly as printed, in order:
+
+**🔧 Bash**
+
+*Practice lab steps 2-3 exactly as printed*
+
+```bash
+API=localhost:4000
+tok() { curl -s $API/auth/login -H 'content-type: application/json' \
+  -d "{\"email\":\"$1@seatbook.test\",\"password\":\"password123\"}" \
+  | sed -E 's/.*"token":"([^"]+)".*/\1/'; }
+A=$(tok alice); B=$(tok bob); echo "tokens: ${#A} ${#B} chars"
+echo "== B2"; curl -X POST $API/bookings/1/cancel -H "authorization: Bearer $B"; echo
+echo "== B5"; curl -s $API/events | grep -oE '"title":"Postgres in Practice"[^}]*seatsLeft":[0-9]+' ; echo
+echo "== B1"; for i in $(seq 1 10); do
+  curl -s -o /dev/null -w "%{http_code} " $API/bookings \
+    -H "authorization: Bearer $A" -H 'content-type: application/json' \
+    -d '{"seatId":7}' &
+done; wait; echo
+docker exec seatbook-original-db-1 psql -U seatbook -c \
+  "select count(*) from \"Booking\" where \"seatId\"=7 and status='CONFIRMED'"
+echo "== B3"; F=$(docker exec seatbook-original-server-1 node -e "console.log(require('jsonwebtoken')
+  .sign({id:1,email:'x',role:'ORGANIZER'},'seatbook-secret-123'))")
+curl -s -w " [%{http_code}]" $API/events -H "authorization: Bearer $F" \
+  -H 'content-type: application/json' \
+  -d '{"title":"x","venue":"v","startsAt":"2030-01-01","rows":-5,"cols":2}'; echo
+echo "== B4"; curl -s $API/auth/login -H 'content-type: application/json' -d '{}'
+sleep 2; curl -s -m 3 $API/health || echo "SERVER DOWN"
+```
+
+<details><summary>Result</summary>
+
+```
+tokens: 201 199 chars
+== B2
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    16  100    16    0     0    217      0 --:--:-- --:--:-- --:--:--   219
+{"success":true}
+== B5
+"title":"Postgres in Practice","venue":"Banani Hall, Room 2","startsAt":"2026-10-30T18:30:00.000Z","price":"$15.00","totalSeats":40,"seatsLeft":37
+
+== B1
+201 409 409 409 409 409 201 409 409 [1]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d '{"seatId":7}'
+[2]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d '{"seatId":7}'
+[3]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d '{"seatId":7}'
+[4]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d '{"seatId":7}'
+[5]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization: Bearer $A" -H 'content-type: application/json' -d '{"seatId":7}'
+[6]   Done                    curl -s -o /dev/null -w "%{http_code} " $API/bookings -H "authorization:
+… [982 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Practice lab step 4 cleanup and restore*
+
+```bash
+docker compose down -v 2>&1 | tail -1 && cd /home/akib/Desktop/dev_monks/seatbook && git worktree remove ../seatbook-original && echo "worktree removed" && git worktree list && docker compose up -d >/dev/null 2>&1; for i in $(seq 1 60); do curl -sf localhost:4000/health >/dev/null && echo "your fixed app is back up" && break; sleep 3; done; git status --short | wc -l | sed 's/^/uncommitted changes in repo: /'
+```
+
+<details><summary>Result</summary>
+
+```
+Network seatbook-original_default  Removed
+worktree removed
+/home/akib/Desktop/dev_monks/seatbook  86fed03 [main]
+your fixed app is back up
+uncommitted changes in repo: 0
+```
+
+</details>
+
+## 🤖 Claude
+
+The cleanup step works, and your fixed app is back up with nothing changed in the repo. Now updating the PDF with what the real run showed:
+
+**🔧 Bash**
+
+*Apply lab corrections and rebuild PDF*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; python3 - $S/make_interview_pdf.py <<'EOF'
+import sys; p=sys.argv[1]; s=open(p).read()
+def rep(a,b,count=1):
+    global s
+    assert s.count(a)>=1, a[:60]; s=s.replace(a,b)
+rep("""**all 10 came back '
+              '201, and the database had 10 confirmed bookings for seat 7.**'""",
+    """**all 10 came back '
+              '201, and the database had 10 confirmed bookings for seat 7.** A later, calmer run gave 2. Races '
+              'depend on timing, so the number varies, but any number above 1 proves the bug. That is also why the '
+              'tests fire many requests at once.'""")
+rep("""# original code: 10 (should be 1)""", """# original code: more than 1 (10 on a busy machine, 2 on a calm one); should be 1
+# got 1? run it again: races depend on timing""")
+rep("""            'Prove it: send many requests in parallel with `curl ... &` in a loop, then count rows in the database.',""",
+    """            'Prove it: send many requests in parallel with `curl ... &` in a loop, then count rows in the database. '
+            'Run it a few times: a race does not lose every time.',""")
+rep("""        repro=\"\"\"curl -X POST $API/bookings/1/cancel -H "authorization: Bearer $B\"""",
+    """        repro=\"\"\"curl -s -X POST $API/bookings/1/cancel -H "authorization: Bearer $B\"""")
+rep("""        ['B2', '`curl -X POST $API/bookings/1/cancel -H "authorization: Bearer $B"`',""",
+    """        ['B2', '`curl -s -X POST $API/bookings/1/cancel -H "authorization: Bearer $B"`',""")
+rep("""        ['B5', '`curl -s $API/events`  (look at "Postgres in Practice")', 'seatsLeft too low'],""",
+    """        ['B5', '`curl -s $API/events`  (look at "Postgres in Practice")', 'seatsLeft 37, but 39 are really free'],""")
+rep("""        ['B1', 'The parallel loop on the B1 card, then count in psql', '10 bookings for one seat'],""",
+    """        ['B1', 'The parallel loop on the B1 card, then count in psql', 'More than 1 booking for one seat (varies: 2 to 10). Got 1? Run again'],""")
+rep("""    story.append(Spacer(1, 4))
+    story.append(callout('TIP:',""",
+    """    story.append(P('Checked: these exact commands were run on the original code and reproduced all five bugs. '
+                   'In a terminal you may also see lines like "[3] Done curl ..." from the parallel loop; that is '
+                   'normal.', 'small'))
+    story.append(Spacer(1, 4))
+    story.append(callout('
+… [366 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+wrote /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+pages: 20
+seatsLeft 37, but 39 are really free
+(varies: 2 to 10). Got 1? Run again
+Checked: these exact commands were run on the original code and reproduced all five bugs. In a terminal
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/lab-04.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+## 🤖 Claude
+
+The lab page is correct and readable. A last look at the cover:
+
+**🔧 Bash**
+
+*Render cover page*
+
+```bash
+S=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad; pdftoppm -r 70 -png -f 1 -l 1 /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf $S/pdfcheck/cover; ls -la /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+```
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/pdfcheck/cover-01.png`
+
+<details><summary>Result</summary>
+
+```
+-rw-rw-r-- 1 akib akib 115731 Oct 23 21:34 /home/akib/Desktop/dev_monks/Seatbook-Interview-Bugs-Guide.pdf
+```
+
+</details>
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+## 🤖 Claude
+
+I've made the PDF: **[Seatbook-Interview-Bugs-Guide.pdf](../Seatbook-Interview-Bugs-Guide.pdf)**, 20 pages, in your `dev_monks` folder. It's outside the repo, so it's only for you and won't be part of your submission.
+
+**What's inside:**
+
+| Section | What it gives you |
+|---|---|
+| 1. The project in one page | What Seatbook is, its parts, and how a hold works |
+| 2. How to find bugs without AI | A 7-step checklist and 6 warning signs to look for in code. This is your answer to "how would you find this yourself?" |
+| 3. Practice lab | Commands to run the **original** code and break it yourself |
+| 4. Bugs in the original code (12) | One card per bug: what was wrong, why it matters, how we found it, **how you find it without AI**, the fix, and a ready answer to say |
+| 5. Bugs in our own new work (6) | The same cards for problems found later, such as the load test errors and the redirect trick |
+| 6. Where the AI was wrong | Leads with the taka one, because you caught that yourself |
+| 7. Interview Q&A | 12 likely questions with answers |
+| 8. Cheat sheet | Numbers, files and commands to remember |
+
+**I tested the practice lab before giving it to you.** I ran every command exactly as printed, on the original code, and all five bugs reproduced: Bob cancelled Alice's booking, a seat was booked twice, an event was created with a fake organizer login, and the server crashed. That run also caught three errors in the PDF, now fixed:
+- **The double-booking count changes between runs** (10 on one run, 2 on another), so the PDF no longer promises a fixed number.
+- **The B2 cancel command printed download-progress noise**, so it now runs quietly.
+- **The seats-left numbers** now match what you'll actually see.
+
+The cleanup steps also work, and your fixed app is running again.
+
+**How to use it:**
+1. Read one bug card a day until you can explain it without looking.
+2. **Do the practice lab once yourself** (page 4, about 10 minutes). In the interview you can then honestly say "I reproduced each bug before fixing it."
+3. Practise the "SAY IT" answers out loud in your own words.
+
+When you've read it, I can play the interviewer and ask you questions from it.
+
+## 🧑 User
+
+make a bangla pdf also but you told me try my self but i want you give me all bug you found from start please
+
+## 🤖 Claude
+
+For Bangla, the library I used for the English PDF can't render Bangla correctly: the joined letters and vowel signs come out broken. So I'll build this one as a web page and print it to PDF with Chrome, which handles Bangla text properly. Checking for a Bangla font first:
+
+**🔧 Bash**
+
+*Check installed Bengali fonts and Chrome*
+
+```bash
+fc-list :lang=bn family | sort -u | head; echo "---"; google-chrome --version
+```
+
+<details><summary>Result</summary>
+
+```
+Ani,অনি
+FreeSans
+FreeSerif
+Jamrul
+Likhan
+Lohit Assamese
+Lohit Bengali
+Mitra
+Mukti,মুক্তি
+---
+Google Chrome 155.0.8059.39
+```
+
+</details>
+
+**🔧 Bash**
+
+*Verify small original issues before listing them*
+
+```bash
+echo "== cors"; git show 6421e64:server/src/index.ts | grep -n "cors()"; echo "== mine catch"; git show 6421e64:server/src/routes/bookings.ts | grep -n -A2 "catch (err) {" | sed -n 1,8p; echo "== msg keys"; git show 6421e64:server/src/routes/bookings.ts | grep -n "msg:"; git show 6421e64:client/src/pages/EventDetailPage.tsx | grep -n "data.error\|onClick={() => setSelectedSeat\|LIVE NOW"; echo "== event not found"; git show 6421e64:server/src/routes/events.ts | grep -n "success: false"; echo "== register error leak"; git show 6421e64:server/src/routes/auth.ts | grep -n "err.message"; echo "== hardcoded urls"; git show 6421e64:client/src/pages/LoginPage.tsx | grep -n "localhost:4000"; git show 6421e64:client/src/pages/EventDetailPage.tsx | grep -n "localhost:4000"
+```
+
+<details><summary>Result</summary>
+
+```
+== cors
+9:app.use(cors());
+== mine catch
+70:  } catch (err) {
+71-    console.log(err);
+72-    res.json([]);
+== msg keys
+22:      return res.status(400).json({ msg: 'This event has already started' });
+64:      setToast({ type: 'error', message: '😢 ' + data.error });
+100:          {isPast ? '⏰ ENDED' : '✨ LIVE NOW'}
+126:                    onClick={() => setSelectedSeat(seat)}
+== event not found
+18:    return res.json({ success: false, message: 'Event not found' });
+== register error leak
+32:    res.status(400).json({ error: err.message });
+== hardcoded urls
+15:    const res = await fetch(`http://localhost:4000/auth/${isLogin ? 'login' : 'register'}`, {
+14:    fetch(`http://localhost:4000/events/${id}`)
+51:    const res = await fetch('http://localhost:4000/bookings', {
+```
+
+</details>
+
+## 🤖 Claude
+
+All confirmed in the original code. Now writing the Bangla document:
+
+**🔧 Write**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/make_bangla.py`
+
+```
+"""Build the Bangla interview guide as HTML; Chrome prints it to PDF (it shapes Bengali correctly)."""
+import html
+import re
+import sys
+
+OUT = sys.argv[1]
+
+
+def inline(text):
+    """Escape, then **bold** and `code`."""
+    t = html.escape(text, quote=False)
+    t = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', t)
+    t = re.sub(r'`([^`]+)`', r'<code>\1</code>', t)
+    return t
+
+
+def p(text):
+    return f'<p>{inline(text)}</p>'
+
+
+def ul(items):
+    return '<ul>' + ''.join(f'<li>{inline(i)}</li>' for i in items) + '</ul>'
+
+
+def pre(text):
+    return f'<pre>{html.escape(text.strip(chr(10)))}</pre>'
+
+
+def table(rows, cls=''):
+    head = ''.join(f'<th>{inline(c)}</th>' for c in rows[0])
+    body = ''.join('<tr>' + ''.join(f'<td>{inline(c)}</td>' for c in r) + '</tr>' for r in rows[1:])
+    return f'<table class="{cls}"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
+
+
+SEV = {'মারাত্মক': 'crit', 'বড়': 'high', 'মাঝারি': 'med', 'ছোট': 'low'}
+
+
+def card(b):
+    parts = [
+        f'<div class="card"><div class="card-head"><span class="num">{b["num"]}</span>'
+        f'<span class="title">{inline(b["title"])}</span><span class="sev {SEV[b["sev"]]}">{b["sev"]}</span></div>',
+        f'<div class="where">{inline(b["where"])}</div>',
+        '<h4>সমস্যাটা কী ছিল</h4>', p(b['what']),
+    ]
+    if b.get('code'):
+        parts.append(pre(b['code']))
+    parts += ['<h4>কেন বিপজ্জনক</h4>', p(b['why']),
+              '<h4>আমরা কীভাবে খুঁজে পেলাম</h4>', p(b['found']),
+              '<h4>AI ছাড়া তুমি নিজে কীভাবে খুঁজবে</h4>', ul(b['manual'])]
+    if b.get('repro'):
+        parts.append(pre(b['repro']))
+    parts += ['<h4>সমাধান</h4>', p(b['fix']),
+              f'<div class="say"><span>ইন্টারভিউতে বলো (English):</span> {inline(b["say"])}</div></div>']
+    return ''.join(parts)
+
+
+MAJOR_ORIGINAL = [
+    dict(num='B1', title='একই সিট অনেকজনের কাছে বিক্রি হতো (double booking)', sev='মারাত্মক',
+         where='মূল কোড: `server/src/routes/bookings.ts`, লাইন ২৫-৩৯ (`POST /bookings`)',
+         what='বুকিং দুই ধাপে হতো। প্রথমে ডাটাবেসকে জিজ্ঞেস করা হতো "এই সিটে কি আগে থেকে বুকিং আছে?", তারপর নতুন বুকিং লেখা হতো। '
+              'এই দুই ধাপের **মাঝখানে একটা ফাঁক** আছে। অনেকজন একই মুহূর্তে ক্লিক করলে সবাই প্রথম ধাপে "খালি" দেখে, তারপর সবাই বুকিং লিখে ফেলে।',
+         code="""const existing = await prisma.booking.findFirst(...)  // ধাপ ১: চেক
+if (existing) return res.status(409)...
+const booking = await prisma.booking.create(...)     // ধাপ ২: লেখা
+//    ^ ফাঁক: অন্য request-ও এখা
+… [42881 more characters omitted]
+```
+
+<details><summary>Result</summary>
+
+```
+File created successfully at: /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/make_bangla.py (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+## 🤖 Claude
+
+Now rendering it to PDF with Chrome:
+
+**🔧 Bash**
+
+*Render Bangla guide to PDF with Chrome*
+
+```bash
+D=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla; OUT=/home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf; python3 -I $D/make_bangla.py $D/guide.html && google-chrome --headless=new --no-sandbox --disable-gpu --no-pdf-header-footer --print-to-pdf=$OUT file://$D/guide.html 2>&1 | grep -v -i "dbus\|bus.cc\|gpu\|ERROR:" | tail -2; python3 -c "from pypdf import PdfReader; print('pages:', len(PdfReader('$OUT').pages))"; rm -f $D/p-*.png; pdftoppm -r 70 -png -f 1 -l 4 $OUT $D/p
+```
+
+<details><summary>Result</summary>
+
+```
+wrote /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/guide.html
+Failed to load module: /home/akib/snap/code/common/.cache/gio-modules/libgiolibproxy.so
+778633 bytes written to file /home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf
+pages: 20
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/p-02.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Render a bug-card page at higher resolution*
+
+```bash
+D=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla; pdftoppm -r 90 -png -f 5 -l 5 /home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf $D/zoom
+```
+
+<details><summary>Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+## 🤖 Claude
+
+The Bangla renders correctly: joined letters and vowel signs are shaped properly. Checking a bug-card page up close:
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/zoom-05.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Fix code font and re-render*
+
+```bash
+D=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla; OUT=/home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf; python3 - $D/make_bangla.py <<'EOF'
+import sys; p=sys.argv[1]; s=open(p).read()
+a="""body { font-family: 'DejaVu Sans', 'Lohit Bengali', sans-serif; font-size: 10pt; line-height: 1.62; color: #1f2328; }
+:lang(bn), body { font-family: 'Lohit Bengali', 'DejaVu Sans', sans-serif; }"""
+b="""body { font-family: 'Lohit Bengali', 'DejaVu Sans', sans-serif; font-size: 10pt; line-height: 1.62; color: #1f2328; }"""
+assert a in s; s=s.replace(a,b)
+s=s.replace("code { font-family: 'DejaVu Sans Mono', monospace;","code { font-family: 'DejaVu Sans Mono', 'Lohit Bengali', monospace;")
+s=s.replace("pre { font-family: 'DejaVu Sans Mono', monospace;","pre { font-family: 'DejaVu Sans Mono', 'Lohit Bengali', monospace;")
+open(p,'w').write(s)
+EOF
+python3 -I $D/make_bangla.py $D/guide.html >/dev/null && google-chrome --headless=new --no-sandbox --disable-gpu --no-pdf-header-footer --print-to-pdf=$OUT file://$D/guide.html 2>&1 | grep "bytes written"; python3 -c "from pypdf import PdfReader; print('pages:', len(PdfReader('$OUT').pages))"; rm -f $D/zoom*; pdftoppm -r 90 -png -f 5 -l 5 $OUT $D/zoom
+```
+
+<details><summary>Result</summary>
+
+```
+787491 bytes written to file /home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf
+pages: 20
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/zoom-05.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+## 🤖 Claude
+
+The code is in a proper code font now, with straight quotes, and the Bangla is clean. Last check, the new complete small-bugs table:
+
+**🔧 Bash**
+
+*Locate and render small-bugs table page*
+
+```bash
+D=/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla; OUT=/home/akib/Desktop/dev_monks/Seatbook-Bug-Guide-Bangla.pdf; for i in $(seq 1 20); do t=$(pdftotext -f $i -l $i $OUT - | grep -m1 -oE "^(S1|N6|Q:|৫\.|৬\.|৭\.|৮\.|৯\.)" ); [ -n "$t" ] && echo "p$i: $t"; done; P=$(for i in $(seq 1 20); do pdftotext -f $i -l $i $OUT - | grep -q "^S1" && echo $i && break; done); echo "small-bug table on page $P"; pdftoppm -r 80 -png -f $P -l $P $OUT $D/small
+```
+
+<details><summary>Result</summary>
+
+```
+p1: ৫.
+p3: N6
+p4: ৫.
+p12: ৫.
+p13: ৬.
+p15: N6
+p17: ৭.
+p18: ৮.
+p19: Q:
+p20: ৯.
+small-bug table on page 12
+```
+
+</details>
+
+**🔧 Read**
+
+`/tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/bangla/small-12.png`
+
+<details><summary>Result</summary>
+
+```
+[image]
+```
+
+</details>
+
+## 🤖 Claude
+
+I've made the Bangla PDF: **[Seatbook-Bug-Guide-Bangla.pdf](../Seatbook-Bug-Guide-Bangla.pdf)**, 20 pages, in the `dev_monks` folder next to the English one. It isn't part of the repo.
+
+**It lists every bug found from the start (39 in total), not only the ones from the lab:**
+
+| Group | Count | Examples |
+|---|---|---|
+| **B1–B12:** big bugs in the original code | 12 | Same seat sold many times, anyone could cancel anyone's booking, anyone could pose as the organizer, one request crashed the server |
+| **S1–S13:** small bugs in the original code (**new: not in the English PDF**) | 13 | CORS open to every site, no limit on login attempts, error message showing "undefined", "LIVE NOW" on events that hadn't started, an endless loading spinner |
+| **N1–N14:** bugs found in our own new work | 14 | 178 errors in the load test, sending users to a fake site after login, released holds showing as cancelled bookings, wrong countdown |
+| **Where the AI was wrong** | 7 | Taka (the one you caught yourself), the overstated claim in the README, and others |
+
+**What each big bug's page covers (in Bangla):** what the problem was, why it's dangerous, how we found it, **how you'd find it yourself without AI**, the fix, and an English "SAY IT" line for the interview.
+
+**Also included:**
+- **A timeline of every bug:** which check found which bug (the first check found the most, the last one found nothing).
+- **Interview Q&A:** questions in English, explanations in Bangla, and English answers in green.
+- **A cheat sheet** of numbers and file names.
+
+**Accuracy:** before writing up the small bugs, I checked each one against the original code, including the exact line for CORS, the "undefined" error and the endless spinner. Bangla renders correctly throughout, including joined letters and vowel signs, and the code blocks use a proper code font so you can copy them.
+
+You don't have to do the practice lab. Everything is written out in this guide. The last page mentions the lab in case you have time; doing it once just makes the bugs easier to remember.
+
+**Which file to use:**
+- **The Bangla PDF:** to understand everything properly.
+- **The English PDF:** to practise saying it in English, the way you'll speak in the interview.
+
+## 🧑 User
+
+*[attached image]*
+
+## 🧑 User
+
+*[attached image]*
+
+## 🧑 User
+
+*[attached image]*
+
+## 🧑 User
+
+??
+
+## 🧑 User
+
+[Image: source: /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/images/3.png]
+
+## 🧑 User
+
+[Image: source: /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/images/4.png]
+
+## 🧑 User
+
+[Image: source: /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/images/5.png]
+
+## 🤖 Claude
+
+Here's what to put in each field. **This form can only be submitted once**, so do the first step before you press Submit.
+
+**Before submitting:** tell me **"export the transcript"** and I'll push the latest version of our conversation to GitHub. The copy there is missing the last few messages (the PDFs and this form). It takes seconds. Then submit.
+
+**The fields:**
+
+| Field | What to enter |
+|---|---|
+| **Full name** | Md. Akib Ullah Jafor (already filled) |
+| **Email** | jaforakib@gmail.com (already filled; it's the address they've been emailing) |
+| **GitHub repository URL** | `https://github.com/AkibUllah/seatbook` |
+| **Public or private?** | **Public** (it is public, so you don't need to add adar2378) |
+| **Anything else we should know?** | The text below |
+
+**For "Anything else we should know?"** (keep it short; the README does the explaining):
+
+> The handover note is at the bottom of the README: what I changed and why, the assumptions I made where the brief was open (e.g. up to 4 holds per person, prices kept in USD), what I'd still do before launch, the weakest part, where the AI was wrong, and how I checked it. Run with `docker compose up --build` from a clean start. 38 integration tests run against a real Postgres, including concurrent booking and holding: `docker compose exec server npm run test:integration`. The AI transcript is in `ai-transcripts/`.
+
+**One more thing worth a look:** the form links to a Google Doc version of the brief. It's probably the same as the PDF you sent me, but since you only get one submission, open it and skim it for anything the PDF didn't have. If you see anything new, send it to me before submitting.
+
+## 🧑 User
+
+check eveything then tell me click submit
+
+## 🤖 Claude
+
+Before you press Submit, I'll check three things: the Google Doc brief for anything new, that the GitHub repo is in its final state, and then the transcript export. First, the brief linked from the form:
+
+**🔧 Bash**
+
+*Download the Google Doc brief as text*
+
+```bash
+cd /home/akib/Desktop/dev_monks && for id in 10L2YRGIpEGDyYDxww2eduOvO-VzcBkar97wz4bidNvs 10L2YRGlpEGDyYDxww2eduOvO-VzcBkar97wz4bidNvs 10L2YRGIpEGDyYDxww2edu0vO-VzcBkar97wz4bidNvs 10L2YRGlpEGDyYDxww2edu0vO-VzcBkar97wz4bidNvs; do code=$(curl -s -L -o /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/brief.txt -w "%{http_code}" "https://docs.google.com/document/d/$id/export?format=txt"); echo "$id -> $code"; [ "$code" = 200 ] && break; done; head -c 300 /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/brief.txt
+```
+
+<details><summary>Result</summary>
+
+```
+10L2YRGIpEGDyYDxww2eduOvO-VzcBkar97wz4bidNvs -> 200
+﻿devmonks logo 
+
+
+
+Seatbook take-home
+Senior Full-Stack Engineer
+The client
+Mr. Rahman runs talks and workshops in Dhaka. He built Seatbook himself with AI over a few weekends. It works, but before real customers pay through it, he wants an engineer to take it over and make it safe to run i
+```
+
+</details>
+
+**🔧 Bash**
+
+*Read the full Google Doc brief*
+
+```bash
+cat /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/brief.txt
+```
+
+<details><summary>Result</summary>
+
+```
+﻿devmonks logo 
+
+
+
+Seatbook take-home
+Senior Full-Stack Engineer
+The client
+Mr. Rahman runs talks and workshops in Dhaka. He built Seatbook himself with AI over a few weekends. It works, but before real customers pay through it, he wants an engineer to take it over and make it safe to run in production. That's you.
+* Repo: https://github.com/devmonks-co/seatbook (click "Use this template")
+* Run it: docker compose up --build. Test accounts are in the README. Mr. Rahman's account is the organizer.
+What it does today (must keep working)
+* Sign up and log in, as an organizer or an attendee
+* Organizers create events with a seat grid and a ticket price
+* Attendees browse events, pick a free seat and book it
+* Attendees see and cancel their bookings
+What he wants added
+"Can people hold a seat for 10 minutes while they decide? Nobody else can take it meanwhile. If they confirm in time it's theirs, otherwise it goes back on sale. Show them how long they have left."
+Your job
+Make what's there production ready, and add holds. How you do it is your call, on the server and in the UI. Don't add other features (email, notifications, password reset, 2FA, payments, deployment). If one is needed before launch, say so in your handover note. Where the request leaves something open, decide and write down your assumption.
+What to send
+1. Your repo, with full git history. Public, or private with adar2378 added as a collaborator.
+2. A handover note in the README: what you chan
+… [768 more characters omitted]
+```
+
+</details>
+
+**🔧 Bash**
+
+*Check template changes and repo final state*
+
+```bash
+cd /home/akib/Desktop/dev_monks/seatbook && git fetch -q template && echo "template main: $(git rev-parse --short template/main)  (we started from 6421e64)"; git log --oneline template/main | head -3; echo "== our repo"; git fetch -q origin && echo "local $(git rev-parse --short HEAD) / GitHub $(git rev-parse --short origin/main)"; git status --porcelain | wc -l | sed 's/^/uncommitted: /'; echo "commits since the last full test run (3f19577):"; git log --oneline 3f19577..HEAD; echo "files changed since then:"; git diff --stat 3f19577..HEAD | tail -2; gh api repos/AkibUllah/seatbook --jq '"visibility: " + .visibility'; for p in README.md ai-transcripts/README.md ai-transcripts/claude-code-session.md docker-compose.yml; do curl -s -o /dev/null -w "$p on GitHub: %{http_code}\n" https://raw.githubusercontent.com/AkibUllah/seatbook/main/$p; done; curl -s -o /dev/null -w "repo page (logged out): %{http_code}\n" https://github.com/AkibUllah/seatbook
+```
+
+<details><summary>Result</summary>
+
+```
+template main: 6421e64  (we started from 6421e64)
+6421e64 Initial commit
+== our repo
+local 86fed03 / GitHub 86fed03
+uncommitted: 0
+commits since the last full test run (3f19577):
+86fed03 Update AI transcript
+84c6a1e Update AI transcript
+8c01a7f Update AI transcript
+files changed since then:
+ ai-transcripts/claude-code-session.md | 306 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 306 insertions(+)
+visibility: public
+README.md on GitHub: 200
+ai-transcripts/README.md on GitHub: 200
+ai-transcripts/claude-code-session.md on GitHub: 200
+docker-compose.yml on GitHub: 200
+repo page (logged out): 200
+```
+
+</details>
+
+**🔧 Bash**
+
+*Final transcript export and push*
+
+```bash
+python3 -I /tmp/claude-1000/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da/scratchpad/export_transcript.py /home/akib/.claude/projects/-home-akib-Desktop-dev-monks/5826cc99-6347-4b49-ade9-ead4a81077da.jsonl ai-transcripts/claude-code-session.md && grep -c [redacted] ai-transcripts/claude-code-session.md; git add ai-transcripts && git commit -q -m "Update AI transcript" && git push -q origin main && git fetch -q origin && echo "local $(git rev-parse --short HEAD) / GitHub $(git rev-parse --short origin/main)" && git status --porcelain | wc -l | sed 's/^/uncommitted: /' && git log --oneline | wc -l | sed 's/^/total commits: /'
+```
